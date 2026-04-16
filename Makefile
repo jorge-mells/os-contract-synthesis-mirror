@@ -1,5 +1,5 @@
 # Build
-CC=riscv64-elf-gcc
+CC=riscv64-unknown-elf-gcc
 CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs
 CFLAGS+=-g -Wl,--gc-sections -mcmodel=medany
 RUNTIME=src/asm/crt0.s
