@@ -10,17 +10,29 @@
 /*
  * Initialize NS16550A UART
  */
+// uart is the most basic io. It allows for reading characters and printing it to a terminal
+// it is just a memory region as given by base_addr
+// A UART chip takes parallel data (a whole byte from your CPU's bus) and "unrolls" it into a serial stream of 1s and 0s over a single wire (the TX line). On the flip side, it catches a stream of bits on the RX line and "rolls" them back up into a byte for your CPU to read.
 void uart_init(size_t base_addr) {
+	// ptr refers to the start of uart
+	// the memory regions from an offset of 0-5 mean different things
   volatile uint8_t *ptr = (uint8_t *)base_addr;
 
   // Set word length to 8 (LCR[1:0])
   const uint8_t LCR = 0b11;
+	// memory offset 3 is line control register which controls info sent over the 'wire'
+	// 0b11 simply means send groups of 8 bits(roughly; not super accurate); there's 00, 01, 10 as well for 5,6,7 respectively
+	// the other bits of this memory region control other information and probably the most interesting is bit 7 which essentially
+	// changes the meaning of the settings and allows for controlling baud rate(the sender and receiver rate must match)
+	// other settings are not so important but note them in this order: stop bit, parity bits, dlab(bit 7)
   ptr[3] = LCR;
 
   // Enable FIFO (FCR[0])
+	// this controls whether bits are overwritten or new incoming bits are simply discarded(roughly)
   ptr[2] = 0b1;
 
   // Enable receiver buffer interrupts (IER[0])
+	// this basically allows for interrupting the cpu when data is received by uart. which then jumps to mtvec
   ptr[1] = 0b1;
 
   // For a real UART, we need to compute and set the baud rate
@@ -49,6 +61,7 @@ int kputchar(int character) {
   return character;
 }
 
+// assumes str is null terminated
 static void kprint(const char *str) {
   while (*str) {
     kputchar((int)*str);
