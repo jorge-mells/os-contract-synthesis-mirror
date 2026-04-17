@@ -1,10 +1,12 @@
+# Directories
+BUILD=build
 # Build
 CC=riscv64-unknown-elf-gcc
-CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs
+CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs 
 CFLAGS+=-g -Wl,--gc-sections -mcmodel=medany
 RUNTIME=src/asm/crt0.s
 LINKER_SCRIPT=src/lds/riscv64-virt.ld
-KERNEL_IMAGE=kmain
+KERNEL_IMAGE=$(BUILD)/kmain
 
 # QEMU
 QEMU=qemu-system-riscv64
@@ -16,20 +18,26 @@ RUN+=-bios none -kernel $(KERNEL_IMAGE)
 # QEMU (debug)
 GDB_PORT=1234
 
-all: uart syscon common kmain
-	$(CC) *.o $(RUNTIME) $(CFLAGS) -T $(LINKER_SCRIPT) -o $(KERNEL_IMAGE)
+all: setup uart syscon common interrupts kmain
+	$(CC) $(BUILD)/*.o $(RUNTIME) $(CFLAGS) -T $(LINKER_SCRIPT) -o $(KERNEL_IMAGE)
+
+setup:
+	mkdir -p $(BUILD)
 
 uart:
-	$(CC) -c src/uart/uart.c $(CFLAGS) -o uart.o
+	$(CC) -c src/uart/uart.c $(CFLAGS) -o $(BUILD)/uart.o
 
 syscon:
-	$(CC) -c src/syscon/syscon.c $(CFLAGS) -o syscon.o
+	$(CC) -c src/syscon/syscon.c $(CFLAGS) -o $(BUILD)/syscon.o
 
 common:
-	$(CC) -c src/common/common.c $(CFLAGS) -o common.o
+	$(CC) -c src/common/common.c $(CFLAGS) -o $(BUILD)/common.o
+
+interrupts:
+	$(CC) -c src/interrupts/interrupts.c $(CFLAGS) -o $(BUILD)/interrupts.o
 
 kmain:
-	$(CC) -c src/kmain.c $(CFLAGS) -o kmain.o
+	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o
 
 run: all
 	$(RUN)
@@ -38,5 +46,5 @@ debug: all
 	$(RUN) -gdb tcp::$(GDB_PORT) -S
 
 clean:
-	rm -vf *.o
+	rm -vf $(BUILD)/*.o
 	rm -vf $(KERNEL_IMAGE)
