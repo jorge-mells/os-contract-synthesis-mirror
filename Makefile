@@ -18,7 +18,7 @@ RUN+=-bios none -kernel $(KERNEL_IMAGE)
 # QEMU (debug)
 GDB_PORT=1234
 
-all: setup uart syscon common interrupts kmain
+all: setup uart syscon common scheduler interrupts kmain
 	$(CC) $(BUILD)/*.o $(RUNTIME) $(CFLAGS) -T $(LINKER_SCRIPT) -o $(KERNEL_IMAGE)
 
 setup:
@@ -34,7 +34,10 @@ common:
 	$(CC) -c src/common/common.c $(CFLAGS) -o $(BUILD)/common.o
 
 interrupts:
-	$(CC) -c src/interrupts/interrupts.c $(CFLAGS) -o $(BUILD)/interrupts.o
+	$(CC) -c src/traps/interrupts.S $(CFLAGS) -o $(BUILD)/interrupts.o
+
+scheduler:
+	$(CC) -c src/traps/scheduler.c $(CFLAGS) -o $(BUILD)/scheduler.o
 
 kmain:
 	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o
