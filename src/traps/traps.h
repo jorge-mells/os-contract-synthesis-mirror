@@ -8,7 +8,7 @@
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>
-extern void setup_traps(uint64_t mstatus_mask, uint64_t mie_mask, uintptr_t trap_entry);
+extern void setup_traps(uint64_t mstatus_mask, uint64_t mie_mask, uintptr_t trap_entry, uint64_t first_program_pc);
 
 extern void main_trap_handler();
 #endif

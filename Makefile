@@ -34,10 +34,10 @@ common:
 	$(CC) -c src/common/common.c $(CFLAGS) -o $(BUILD)/common.o
 
 interrupts:
-	$(CC) -c src/traps/interrupts.S $(CFLAGS) -o $(BUILD)/interrupts.o
+	$(CC) -c src/traps/traps.S $(CFLAGS) -o $(BUILD)/interrupts.o
 
 scheduler:
-	$(CC) -c src/traps/scheduler.c $(CFLAGS) -o $(BUILD)/scheduler.o
+	$(CC) -c src/process-mgmt/scheduler.c $(CFLAGS) -o $(BUILD)/scheduler.o
 
 kmain:
 	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o

@@ -3,3 +3,5 @@
 - not planned: everything else
 - ideally we should be able to run most assembly fairly smoothly on the os.
 - for now the os is non-parallel
+
+- next steps: fix program loading, fix kernel vs user stack issues, then maybe start thinking about syscalls. filesystem is unecessary
