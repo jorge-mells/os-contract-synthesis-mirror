@@ -7,5 +7,6 @@
 
 void poweroff(void);
 void reboot(void);
+void cleanup_and_exit(void);
 
 #endif
