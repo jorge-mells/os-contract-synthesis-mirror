@@ -184,3 +184,18 @@ main_trap_handler:
   ld x31, 248(sp)
   addi sp, sp, 256
   mret
+
+.global setup_memory_protection
+setup_memory_protection:
+  # 1. Define the Range (The "Whole World")
+  li t0, -1              # All ones: 0xFFFFFFFFFFFFFFFF
+  csrw pmpaddr0, t0
+
+  # 2. Define Permissions (NAPOT, R, W, X)
+  li t1, 0x1F            # 0x1F = 0001 1111 (NAPOT + RWX)
+  csrw pmpcfg0, t1
+
+  ret
+
+.global setup_memory_protection_c
+setup_memory_protection_c:
