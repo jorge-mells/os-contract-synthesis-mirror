@@ -17,7 +17,8 @@ SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x10000)); . = SEGMENT_START("text-segment", 0x10000) + SIZEOF_HEADERS;
-  PROVIDE(__stack_top = ORIGIN(RAM) + 0x100000);
+  STACK_START_OFFSET = 0x100000, STACK_LENGTH = 0x4000;
+  PROVIDE(__stack_top = ORIGIN(RAM) + STACK_START_OFFSET);
   .interp         : { *(.interp) }
   .note.gnu.build-id  : { *(.note.gnu.build-id) }
   .hash           : { *(.hash) }
@@ -203,6 +204,12 @@ SECTIONS
 		            MAX(__DATA_BEGIN__ + 0x800, __BSS_END__ - 0x800));
   _end = .; PROVIDE (end = .);
   . = DATA_SEGMENT_END (.);
+  /* HEAP */
+  STACK_START = ORIGIN(RAM) + STACK_START_OFFSET;
+  GUARD_HOLE = 0x1000;
+  . = ALIGN(4096);
+  _heap_start = .;
+  _heap_end = (STACK_START - STACK_LENGTH - GUARD_HOLE) & ~(GUARD_HOLE - 1); /* two fixes here. 1. no more hardcoding those vals. 2. you might need stack protection. 3. look at safety thingy where you have small space between stack and heap which triggers a memory exception with pmp */
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

@@ -1,3 +1,6 @@
 *.o
 kmain
 .vscode
+*.img
+*.bin
+*.elf

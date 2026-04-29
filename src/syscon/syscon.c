@@ -14,6 +14,11 @@ void reboot(void) {
 }
 
 void cleanup_and_exit(void) {
-  setup_traps(0, 0, 0, 0);
+  setup_traps(0, 0, 0);
   poweroff();
+  // 3. THE CRITICAL PART: If the hardware takes a few milliseconds 
+  // to actually die, we MUST NOT do anything else.
+  while(1) {
+    asm volatile("wfi"); // Stay here in low power until the lights go out
+  }
 }
