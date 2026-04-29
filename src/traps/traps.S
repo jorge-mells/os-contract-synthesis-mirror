@@ -1,27 +1,42 @@
 #include "traps.h"
 #include "../process-mgmt/scheduler.h"
+#include "../syscalls/handler.h"
 
 # .equ INTERVAL, 10000000 # cpu dependent
 .equ CLINT_MTIMECMP, 0x02004000 # cpu dependent
 .equ CLINT_MTIME,    0x0200bff8 # cpu dependent
 
 .section .rodata
-  log_exception_msg: .asciz "Exception %u at %p. Exiting...\n"
+  log_exception_msg: .asciz "Exception %u at %p.\n"
   log_interrupt_msg: .asciz "Interrupt %u handled.\n"
   log_interrupt_nohandle_msg: .asciz "Interrupt %u triggered. Exiting...\n"
   log_debug: .asciz "here\n"
+  log_print: .asciz "val: %u\n"
 
 .section .text
 
-// see the signature of setup_traps to know what is in a0-a3 according to risc-v abi
+// NOTE: I am currently not paying full attention to which regs are being used, hence there might be bugs there.
+// see the signature of the various functions defined here in traps.h
+.extern current_running_pcb
+.extern kernel_sp
+.extern kernel_gp
 .global setup_traps
+.global main_trap_handler
+.global run_first_program
+
+
+
+
+##############################
+###### Function call #########
+##############################
 setup_traps:
   # Check if mtie is being enabled in a1
   li t0, 0x80 # load mask for mtie
   and t1, a1, t0 
   beqz t1, .skip_timer 
 
-  # Setup mtimecmp
+  # Setup mtimecmp(probably too early, but good enough for now.)
   li t2, CLINT_MTIMECMP
   li t3, CLINT_MTIME
   ld t4, 0(t3) # t4 = &mtime
@@ -30,31 +45,35 @@ setup_traps:
   sd t4, 0(t2) # mtimecmp = t4
 
 .skip_timer:
+  # setup other important m-regs
   csrw mtvec, a2
-  csrw mepc, a3
   csrs mie, a1
   csrs mstatus, a0
-  beqz a3, .do_ret
-  # NOTE: don't forget to later change stack pointer for user progs
-  mret
-
-.do_ret:
   ret
   
 
-.global main_trap_handler
+
+##############################
+###### Function call #########
+##############################
 .align 4
-# NOTE: unimplemented interrupt/exception blocks just exit
+# NOTE: unimplemented interrupt/exception blocks just exit(poweroff) the kernel
 main_trap_handler:
   # prologue
   # unfortunately, since we can't tell what regs were being used before the trap(there's no interrupt/exception abi, all have
   # to be saved
-  # put this data in some protected location instead. we could move it directly into pcb block and then out of pcb block.
-  addi sp, sp, -264 # NOTE: instead of using user_stack, switch later to kernel_stack
+
+  # store sp for user before doing anything else
+  csrw mscratch, sp 
+  la sp, current_running_pcb
+  ld sp, 0(sp)
+  addi sp, sp, PCB_CONTEXT_BASE # get address of context base
+
+  # store pcb regs
   sd x0, 0(sp)
   sd x1, 8(sp)
   sd x2, 16(sp)
-  sd x3, 24(sp)
+  # sd x3, 24(sp)
   sd x4, 32(sp)
   sd x5, 40(sp)
   sd x6, 48(sp)
@@ -84,24 +103,74 @@ main_trap_handler:
   sd x30, 240(sp)
   sd x31, 248(sp)
 
-  csrr a1, mcause
+  # store user sp in pcb
+  mv t0, sp
+  csrr sp, mscratch # get user sp back
+  sd x3, 24(t0)
+
+  # save user pc; so that syscalls and other code can access and modify this as required
+  la t0, current_running_pcb   # Get address of the pointer
+  ld t0, 0(t0)                 # t0 now holds the actual base address of the PCB
+  # Calculate the specific address within the PCB for the PC
+  addi t1, t0, PCB_PC          # t1 = address of pcb->pc
+  # Save the exception program counter (user's PC) into the PCB
+  csrr t0, mepc          # CSR Read: t0 = mepc
+  sd t0, 0(t1)           # Store t0 into the address held in t1 (pcb->pc)
+
+  # load kernel stack pointer and gp
+  la t0, kernel_sp
+  ld sp, 0(t0)
+  la t0, kernel_gp
+  ld gp, 0(t0)
+
   # jump to right handler if interrupt or exception
+  csrr a1, mcause
   blt a1, zero, .main_interrupt_handler
 
 .main_exception_handle:
   # print a log message
   la a0, log_exception_msg
+  # clear the msb to get the pure id
+  csrr a1, mcause
+  li s0, 0x7fffffffffffffff
+  and a1, a1, s0
   csrr a2, mepc
   call kprintf
-  # j .end_main_trap_handler
+
+  # kprintf messes up aX regs hence I reload
+  csrr a1, mcause
+  li s0, 0x7fffffffffffffff
+  and a1, a1, s0
+
+  # jump to right exception handler
+  li s0, 8
+  beq a1, s0, .ecall_exception_handler
+
+  j .other_exceptions_handler
+
+.ecall_exception_handler:
+  # load address of regs and pc for handle_syscall func call.
+  la t0, current_running_pcb
+  ld t0, 0(t0)
+  addi a0, t0, PCB_CONTEXT_BASE # get address of context base
+  addi a1, t0, PCB_PC # get address of pc
+  call handle_syscall
+  j .end_main_trap_handler
+
+.other_exceptions_handler:
   call cleanup_and_exit
 
 
 .main_interrupt_handler:
   # print a log message
   la a0, log_interrupt_msg
-  call kprintf
   # clear the msb to get the pure id
+  csrr a1, mcause
+  li s0, 0x7fffffffffffffff
+  and a1, a1, s0
+  call kprintf
+
+  # kprintf messes up aX regs
   csrr a1, mcause
   li s0, 0x7fffffffffffffff
   and a1, a1, s0
@@ -117,16 +186,9 @@ main_trap_handler:
 
 .software_interrupt_handler:
   call cleanup_and_exit
-  # j .end_main_trap_handler
 
-.extern current_running_pcb
 .timer_interrupt_handler:
-  # get back all regs into their position(basically epilogue)
-  # save regs into correct pcb location
-
   call scheduler # scheduler changes current_running_pcb
-
-  # restore the regs.(basically prologue)
 
   # reset mtimecmp
   # WARN: the edge case of mtime being too large and overflowing is not handled
@@ -135,6 +197,7 @@ main_trap_handler:
   li s3, CLINT_MTIME
   # get the time slice from the NEW current_running_pcb
   la s5, current_running_pcb
+  add s5, s5, PCB_TIME_SLICE
   ld s5, 0(s5)
   ld s5, 0(s5)
   # calculate and set the new alarm
@@ -146,14 +209,34 @@ main_trap_handler:
 
 .other_interrupts_handler:
   call cleanup_and_exit
-  # j .end_main_trap_handler
 
 .end_main_trap_handler:
+  # load pc
+  # 1. Get the base address of the current PCB
+  la t0, current_running_pcb
+  ld t0, 0(t0)                 # t0 = pointer to current PCB
+  # 2. Load the saved PC value from the PCB into a scratch register
+  # Using the same PCB_PC offset used during the save
+  ld t1, PCB_PC(t0)            # t1 = pcb->pc
+  # 3. Write the value into the Machine Exception Program Counter
+  csrw mepc, t1
+
+  # save kernel stack pointer and global pointer
+  la t0, kernel_sp
+  sd sp, 0(t0)
+  la t0, kernel_gp
+  sd gp, 0(t0)
+
+  # get location of regs stored
+  la sp, current_running_pcb
+  ld sp, 0(sp)
+  addi sp, sp, PCB_CONTEXT_BASE
+
   # epilogue
   ld x0, 0(sp)
   ld x1, 8(sp)
   ld x2, 16(sp)
-  ld x3, 24(sp)
+  # ld x3, 24(sp)
   ld x4, 32(sp)
   ld x5, 40(sp)
   ld x6, 48(sp)
@@ -182,20 +265,33 @@ main_trap_handler:
   ld x29, 232(sp)
   ld x30, 240(sp)
   ld x31, 248(sp)
-  addi sp, sp, 256
+  # addi sp, sp, 256
+
+  # load user sp back
+  ld x3, 24(sp)
   mret
 
-.global setup_memory_protection
-setup_memory_protection:
-  # 1. Define the Range (The "Whole World")
-  li t0, -1              # All ones: 0xFFFFFFFFFFFFFFFF
-  csrw pmpaddr0, t0
 
-  # 2. Define Permissions (NAPOT, R, W, X)
-  li t1, 0x1F            # 0x1F = 0001 1111 (NAPOT + RWX)
-  csrw pmpcfg0, t1
 
-  ret
+##############################
+###### Function call #########
+##############################
+run_first_program:
+  # setup pc
+  la t0, current_running_pcb # load pointer address
+  ld t0, 0(t0) # load actual pointer
+  ld t0, PCB_PC(t0) # load pc address
+  csrw mepc, t0 # set mepc for mret
 
-.global setup_memory_protection_c
-setup_memory_protection_c:
+  # save kernel stack pointer and global pointer
+  la t0, kernel_sp
+  sd sp, 0(t0)
+  la t0, kernel_gp
+  sd gp, 0(t0)
+
+  # load user stack pointer and global pointer(currently useless)
+  la t0, current_running_pcb
+  ld t0, 0(t0)
+  ld sp, PCB_REG_SP(t0)
+  ld gp, PCB_REG_GP(t0)
+  mret
