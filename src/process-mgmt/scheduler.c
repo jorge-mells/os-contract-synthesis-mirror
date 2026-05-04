@@ -7,17 +7,24 @@
 
 uint64_t kernel_sp, kernel_gp;
 pcb_t pcb_table[MAX_PROCS];
-// I'm assuming at the beginning, pcb blocks are also auto zeroed.
 pcb_t *current_running_pcb;
 
-// for now we always load programs in order
+/**
+ * @brief Global counter for assigning unique process identifiers and tracking which programs
+ * have already been loaded.
+ * 
+ * This variable tracks the last assigned ID to ensure every loaded program 
+ * receives a unique identifier. 
+ * 
+ * @note **Initial Value:** Set to @c -1 (underflow state) so that the first 
+ *       program loaded increments this value to @c 0.
+ * @warning This variable is a **critical dependency** for @ref load_programs; 
+ *          if not initialized correctly, PID collisions could occur or some programs might be skipped.
+ */
 uint64_t next_prog_id = -1;
 
-// We assume next_prog_id starts at -1 in your global definitions
-// We assume num_requested is how many you WANT to load right now
-
-void load_programs(uint64_t start_addr, uint64_t space_allocated, int num_requested) {
-    uint64_t total_progs_on_disk = get_num_progs();
+void load_programs(uint64_t start_addr, uint64_t space_allocated, uint8_t num_requested) {
+    uint64_t total_progs_on_disk = total_prog_count;
     
     // 1. Check if we've already finished the disk
     // If next_prog_id was 5 and we have 5 progs, we're done.
@@ -108,7 +115,19 @@ void remove_memory_protections() {
     PMP_SET_TOR(1, 2, 0, 0, 0);
 }
 
-void simple_round_robin() {
+/**
+ * @brief Round-Robin Task Selector.
+ * 
+ * Cycles through the @ref pcb_table to pick the next task to execute.
+ * 
+ * @return **Execution Status:**
+ *         - @c 1: Success. A runnable process was found and scheduled.
+ *         - @c 0: Failure. No runnable processes exist; the CPU has no work to do.
+ * 
+ * @important The return value determines whether the kernel should resume 
+ *            execution or exit.
+ */
+int simple_round_robin() {
     // 2. Find the next READY process using Round Robin
     // We start searching at the NEXT index after the current one
     int current_idx = (int)(current_running_pcb - &pcb_table[0]);
@@ -123,12 +142,12 @@ void simple_round_robin() {
             current_running_pcb = p;
             p->state = PCB_STATE_RUNNING;
             add_memory_protections();
-            return;
+            return 1;
         }
     }
+    return 0;
 }
 
-// simple round robin
 void scheduler() {
 
 
@@ -136,6 +155,7 @@ void scheduler() {
     if (current_running_pcb == NULL) {
         current_running_pcb = &pcb_table[0];
         add_memory_protections();
+        kprintf("\nStarting with Process %u...\n", current_running_pcb->pid);
         return;
     }
     // 1. If the current slot just became UNUSED (process exited), 
@@ -149,9 +169,14 @@ void scheduler() {
         remove_memory_protections();
     }
 
-    simple_round_robin();
+    int status = simple_round_robin();
+    if (status) {
+        kprintf("\nSwitching to Process %u...\n", current_running_pcb->pid);
+        return;
+    }
 
     // 3. If the loop finishes, it means we checked every single slot
     // and found nothing READY. Time to shut down.
+    kprintf("All programs executed\n");
     cleanup_and_exit();
 }

@@ -4,3 +4,4 @@ kmain
 *.img
 *.bin
 *.elf
+docs/

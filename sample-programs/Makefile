@@ -1,6 +1,8 @@
 # List your programs here (without extensions)
-PROGRAMS = prog1 prog2 prog3
-DISK = ../disk.img
+# to change program order or add more programs change the PROGRAMS variable.
+PROGRAMS ?= prog1 prog2 prog3 prog4
+DISK=../disk.img
+BUILD=build
 
 # Toolchain configuration
 CC = riscv64-unknown-elf-gcc
@@ -15,15 +17,16 @@ CFLAGS = -T linker.ld -nostdlib -mcmodel=medany -march=rv64imafd -mabi=lp64d -mn
 all: $(DISK) 
 
 # Pattern rule to create .bin from .s
-%.bin: %.s
-	$(CC) $(CFLAGS) -o $*.elf $<
-	$(OBJCOPY) -O binary $*.elf $@
+$(BUILD)/%.bin: %.s
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -o $(BUILD)/$*.elf $<
+	$(OBJCOPY) -O binary $(BUILD)/$*.elf $@
 
 # Clean up build artifacts
 clean:
-	rm -f *.elf *.bin
+	rm -f $(BUILD)/*.elf $(BUILD)/*.bin
 
-$(DISK): $(PROGRAMS:%=%.bin)
+$(DISK): $(PROGRAMS:%=$(BUILD)/%.bin)
 	@echo "Creating fixed-size disk image..."
 	# 1. Create a 1MB empty disk
 	dd if=/dev/zero of=$(DISK) bs=1M count=1 status=none
@@ -33,7 +36,7 @@ $(DISK): $(PROGRAMS:%=%.bin)
 	# Sector 1-8: Prog1
 	# Sector 9-16: Prog2...
 	@offset=1; \
-	for bin in $(PROGRAMS:%=%.bin); do \
+	for bin in $(PROGRAMS:%=$(BUILD)/%.bin); do \
 		echo "Flashing $$bin to sector $$offset"; \
 		dd if=$$bin of=$(DISK) bs=512 seek=$$offset conv=notrunc status=none; \
 		offset=$$(($$offset + 8)); \
@@ -41,7 +44,7 @@ $(DISK): $(PROGRAMS:%=%.bin)
 	
 	# 3. Generate ToC and write to Sector 0
 	python3 generate_toc.py $(PROGRAMS:%=%.bin)
-	dd if=toc.bin of=$(DISK) bs=512 count=1 conv=notrunc status=none
+	dd if=$(BUILD)/toc.bin of=$(DISK) bs=512 count=1 conv=notrunc status=none
 
 # DISK=../disk.img
 # $(DISK): prog1.bin

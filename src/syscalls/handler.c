@@ -1,24 +1,22 @@
-#include "../uart/uart.h"
 #include "handler.h"
-#include "syscalls.h"
 
-void handle_syscall(uint64_t* user_regs, uint64_t* pc) {
-    uint64_t syscall_num = user_regs[17]; // a7 holds the "ID"
+void handle_syscall() {
+    uint64_t syscall_num = current_running_pcb->context[17]; // a7 holds the "ID"
     
     switch (syscall_num) {
         case 64: { // SYS_WRITE
-            uint64_t fd    = user_regs[10]; // a0
-            const char* buff     = (const char*)user_regs[11]; // a1
-            size_t count   = user_regs[12]; // a2
+            uint64_t fd    = current_running_pcb->context[10]; // a0
+            const char* buff     = (const char*)current_running_pcb->context[11]; // a1
+            size_t count   = current_running_pcb->context[12]; // a2
             
-            user_regs[10] = write(fd, buff, count);
-            *pc = *pc + 4;
+            current_running_pcb->context[10] = write(fd, buff, count);
+            current_running_pcb->pc = current_running_pcb->pc + 4;
             break;
         }
 
         case 93: { // SYS_EXIT
             // a0 (Register 10) is the exit status code
-            int exit_status = (int)user_regs[10];
+            int exit_status = (int)current_running_pcb->context[10];
             
             // Call your sys_exit function with the status
             sys_exit(exit_status);
@@ -28,8 +26,7 @@ void handle_syscall(uint64_t* user_regs, uint64_t* pc) {
         }
 
         default:
-            // Return -1 for unknown syscalls
-            user_regs[10] = -1;
+            sys_exit(1);
             break;
     }
 }

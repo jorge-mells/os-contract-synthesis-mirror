@@ -1,10 +1,8 @@
 #include "traps.h"
+#include "../platform/platform.h"
 #include "../process-mgmt/scheduler.h"
 #include "../syscalls/handler.h"
-
-# .equ INTERVAL, 10000000 # cpu dependent
-.equ CLINT_MTIMECMP, 0x02004000 # cpu dependent
-.equ CLINT_MTIME,    0x0200bff8 # cpu dependent
+#include "../syscalls/syscalls.h"
 
 .section .rodata
   log_exception_msg: .asciz "Exception %u at %p.\n"
@@ -20,37 +18,10 @@
 .extern current_running_pcb
 .extern kernel_sp
 .extern kernel_gp
-.global setup_traps
 .global main_trap_handler
-.global run_first_program
 
 
 
-
-##############################
-###### Function call #########
-##############################
-setup_traps:
-  # Check if mtie is being enabled in a1
-  li t0, 0x80 # load mask for mtie
-  and t1, a1, t0 
-  beqz t1, .skip_timer 
-
-  # Setup mtimecmp(probably too early, but good enough for now.)
-  li t2, CLINT_MTIMECMP
-  li t3, CLINT_MTIME
-  ld t4, 0(t3) # t4 = &mtime
-  li t5, INTERVAL # t5 = mtime
-  add t4, t4, t5 # add mtime and interval to get mtimecmp
-  sd t4, 0(t2) # mtimecmp = t4
-
-.skip_timer:
-  # setup other important m-regs
-  csrw mtvec, a2
-  csrs mie, a1
-  csrs mstatus, a0
-  ret
-  
 
 
 ##############################
@@ -149,16 +120,13 @@ main_trap_handler:
   j .other_exceptions_handler
 
 .ecall_exception_handler:
-  # load address of regs and pc for handle_syscall func call.
-  la t0, current_running_pcb
-  ld t0, 0(t0)
-  addi a0, t0, PCB_CONTEXT_BASE # get address of context base
-  addi a1, t0, PCB_PC # get address of pc
   call handle_syscall
   j .end_main_trap_handler
 
 .other_exceptions_handler:
-  call cleanup_and_exit
+  li a0, 1
+  call sys_exit
+  j .end_main_trap_handler
 
 
 .main_interrupt_handler:
@@ -269,29 +237,4 @@ main_trap_handler:
 
   # load user sp back
   ld x3, 24(sp)
-  mret
-
-
-
-##############################
-###### Function call #########
-##############################
-run_first_program:
-  # setup pc
-  la t0, current_running_pcb # load pointer address
-  ld t0, 0(t0) # load actual pointer
-  ld t0, PCB_PC(t0) # load pc address
-  csrw mepc, t0 # set mepc for mret
-
-  # save kernel stack pointer and global pointer
-  la t0, kernel_sp
-  sd sp, 0(t0)
-  la t0, kernel_gp
-  sd gp, 0(t0)
-
-  # load user stack pointer and global pointer(currently useless)
-  la t0, current_running_pcb
-  ld t0, 0(t0)
-  ld sp, PCB_REG_SP(t0)
-  ld gp, PCB_REG_GP(t0)
   mret
