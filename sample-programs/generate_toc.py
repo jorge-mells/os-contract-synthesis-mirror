@@ -9,7 +9,7 @@ START_SECTOR = 1
 def generate():
     bin_files = sys.argv[1:]
     
-    with open("toc.bin", "wb") as f:
+    with open("build/toc.bin", "wb") as f:
         # 1. Number of programs (64-bit)
         f.write(struct.pack("<Q", len(bin_files)))
         

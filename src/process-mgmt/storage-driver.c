@@ -1,12 +1,13 @@
 #include "storage-driver.h"
+#include "../platform/platform.h"
 #include "../common/common.h"
 #include <stdint.h>
 
 // --- Configuration ---
 #define VIRTIO_MAGIC_VALUE       0x74726976
 #define VIRTIO_ID_BLOCK          2
-#define VIRTIO_MMIO_START        0x10001000
-#define VIRTIO_MMIO_STEP         0x1000  
+#define VIRTIO_MMIO_START        MMIO_START
+#define VIRTIO_MMIO_STEP         MMIO_STEP  
 
 // --- MMIO Offsets (Modern V2) ---
 #define VIRTIO_MMIO_MAGIC        0x000

@@ -17,7 +17,8 @@ uint64_t write(uint64_t fd, const char* buff, size_t count) {
 
 void sys_exit(uint64_t status) {
     // 1. Log the exit for debugging (optional)
-    kprintf("\n[Process Exited with status %u]\n", status);
+    uint64_t pid = current_running_pcb->pid;
+    kprintf("\n[Process %u Exited with status %u]\n", pid, status);
     current_running_pcb->state = PCB_STATE_UNUSED;
     scheduler();
 }

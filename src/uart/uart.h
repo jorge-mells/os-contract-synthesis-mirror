@@ -1,11 +1,18 @@
+/**
+ * @file uart.h
+ * @brief Serial Communication Driver for RISC-V UART.
+ * 
+ * This header provides the interface for the Universal Asynchronous 
+ * Receiver-Transmitter (UART), typically a 16550A-compatible controller. 
+ * It also provides several higher level utility functions for console output
+ * and input.
+ */
 #ifndef UART_H
 #define UART_H
 
 #include <stddef.h>
 #include <stdarg.h>
-
-// 0x10000000 is memory-mapped address of UART according to device tree
-#define UART_ADDR 0x10000000
+#include "../platform/platform.h"
 
 void uart_init(size_t);
 int kputchar(int);

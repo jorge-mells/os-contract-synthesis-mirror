@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "uart/uart.h"
 #include "process-mgmt/storage-driver.h"
 #include "syscon/syscon.h"
@@ -9,6 +10,8 @@
 
 #define ARCH "RISC-V"
 #define MODE 'M'
+// Force the start to the next 4KB boundary so that user code doesn't need to be concerned about alignment
+#define USER_SPACE_START  (((uintptr_t)__stack_top + 4095) & ~4095)
 
 // NOTE: there are still lots of magic numbers littered in this codebase. The code is also quite messy but should hopefully be not too hard to follow
 void kmain(void) {
@@ -16,14 +19,10 @@ void kmain(void) {
 
   kprintf("Hello %s World!\n", ARCH);
   kprintf("We are in %c-mode!\n", MODE);
-  // I use mpie instead of mie since mret sets mie as what was in mpie and i don't want interrupts triggered until i mret.
   setup_traps(MSTATUS_MPP_U | MSTATUS_MPIE, MIE_MTIE, (uintptr_t)main_trap_handler);
   init_disk();
-  // loads information about programs on the disk to be able to properly eventually load programs
-  // it's done here so we only do it once forever
-  init_toc();
-  // 10000 is simply a random large number 0x82000000 is chosen since the kernel code + everything else ends at 0x81000000(see linker script)
-  load_programs(0x82000000, MAX_PROCS * BLOCK_SIZE, 10000);
+  load_prg_info();
+  load_programs(USER_SPACE_START, MAX_PROCS * BLOCK_SIZE, total_prog_count);
   scheduler();
   run_first_program();
 
