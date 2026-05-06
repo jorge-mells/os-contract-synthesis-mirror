@@ -64,4 +64,8 @@
  */
 #define UART_ADDR 0x10000000
 
+/**
+ * @brief Use this flag to turn on debug printing
+ */
+#define LOG_ENABLED 0
 #endif /* PLATFORM_H */

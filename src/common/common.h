@@ -6,6 +6,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 #include <stdint.h>
+#include "../platform/platform.h"
+#include "../uart/uart.h"
 
 /**
  * @brief Converts a lowercase character to uppercase.
@@ -25,6 +27,11 @@ int toupper(int c);
  * @note This function is the "Point of No Return" for the kernel.
  */
 void panic(const char *format, ...);
+
+/**
+ * @brief main kernel logger
+ */
+void klog(const char *format, ...);
 
 /**
  * @name PMP Configuration Flags

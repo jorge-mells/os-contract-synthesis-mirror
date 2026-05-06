@@ -5,11 +5,11 @@
 #include "../syscalls/syscalls.h"
 
 .section .rodata
-  log_exception_msg: .asciz "Exception %u at %p.\n"
-  log_interrupt_msg: .asciz "Interrupt %u handled.\n"
-  log_interrupt_nohandle_msg: .asciz "Interrupt %u triggered. Exiting...\n"
+  log_exception_msg: .asciz "\nException %u at %p.\n"
+  log_interrupt_msg: .asciz "\nInterrupt %u handled.\n"
+  log_interrupt_nohandle_msg: .asciz "\nInterrupt %u triggered. Exiting...\n"
   log_debug: .asciz "here\n"
-  log_print: .asciz "val: %u\n"
+  log_print: .asciz "val: %p\n"
 
 .section .text
 
@@ -43,8 +43,8 @@ main_trap_handler:
   # store pcb regs
   sd x0, 0(sp)
   sd x1, 8(sp)
-  sd x2, 16(sp)
-  # sd x3, 24(sp)
+  # sd x2, 16(sp)
+  sd x3, 24(sp)
   sd x4, 32(sp)
   sd x5, 40(sp)
   sd x6, 48(sp)
@@ -77,7 +77,7 @@ main_trap_handler:
   # store user sp in pcb
   mv t0, sp
   csrr sp, mscratch # get user sp back
-  sd x3, 24(t0)
+  sd x2, 16(t0)
 
   # save user pc; so that syscalls and other code can access and modify this as required
   la t0, current_running_pcb   # Get address of the pointer
@@ -106,9 +106,9 @@ main_trap_handler:
   li s0, 0x7fffffffffffffff
   and a1, a1, s0
   csrr a2, mepc
-  call kprintf
+  call klog
 
-  # kprintf messes up aX regs hence I reload
+  # klog messes up aX regs hence I reload
   csrr a1, mcause
   li s0, 0x7fffffffffffffff
   and a1, a1, s0
@@ -136,9 +136,9 @@ main_trap_handler:
   csrr a1, mcause
   li s0, 0x7fffffffffffffff
   and a1, a1, s0
-  call kprintf
+  call klog
 
-  # kprintf messes up aX regs
+  # klog messes up aX regs
   csrr a1, mcause
   li s0, 0x7fffffffffffffff
   and a1, a1, s0
@@ -203,8 +203,8 @@ main_trap_handler:
   # epilogue
   ld x0, 0(sp)
   ld x1, 8(sp)
-  ld x2, 16(sp)
-  # ld x3, 24(sp)
+  # ld x2, 16(sp)
+  ld x3, 24(sp)
   ld x4, 32(sp)
   ld x5, 40(sp)
   ld x6, 48(sp)
@@ -236,5 +236,5 @@ main_trap_handler:
   # addi sp, sp, 256
 
   # load user sp back
-  ld x3, 24(sp)
+  ld x2, 16(sp)
   mret
