@@ -155,7 +155,7 @@ void scheduler() {
     if (current_running_pcb == NULL) {
         current_running_pcb = &pcb_table[0];
         add_memory_protections();
-        kprintf("\nStarting with Process %u...\n", current_running_pcb->pid);
+        klog("\nStarting with Process %u...\n", current_running_pcb->pid);
         return;
     }
     // 1. If the current slot just became UNUSED (process exited), 
@@ -171,12 +171,12 @@ void scheduler() {
 
     int status = simple_round_robin();
     if (status) {
-        kprintf("\nSwitching to Process %u...\n", current_running_pcb->pid);
+        klog("\nSwitching to Process %u...\n", current_running_pcb->pid);
         return;
     }
 
     // 3. If the loop finishes, it means we checked every single slot
     // and found nothing READY. Time to shut down.
-    kprintf("All programs executed\n");
+    klog("All programs executed\n");
     cleanup_and_exit();
 }

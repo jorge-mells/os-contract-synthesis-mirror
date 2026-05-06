@@ -62,7 +62,7 @@ kmain:
 	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o
 
 run: all ## run the kernel with programs
-	$(RUN)
+	$(RUN) ## -d int,guest_errors -no-reboot
 
 debug: all
 	$(RUN) -gdb tcp::$(GDB_PORT) -S
