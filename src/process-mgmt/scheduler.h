@@ -5,12 +5,13 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
-#define INTERVAL 1000
 #define MAX_PROCS 10
 #define PROG_SIZE  4096
 #define STACK_SIZE 4096
 #define GUARD_SIZE 1024
 #define BLOCK_SIZE (PROG_SIZE + STACK_SIZE + GUARD_SIZE)
+
+#include "../platform/platform.h"
 
 
 #ifndef __ASSEMBLER__

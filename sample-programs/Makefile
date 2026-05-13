@@ -6,7 +6,9 @@ BUILD=build
 
 # Toolchain configuration
 CC = riscv64-unknown-elf-gcc
+# CC=/home/jorge/thesis/riscv_tools/bin/riscv-none-elf-gcc
 OBJCOPY = riscv64-unknown-elf-objcopy
+# OBJCOPY=/home/jorge/thesis/riscv_tools/bin/riscv-none-elf-objcopy
 
 # Flags
 # -march=rv64imafd: Forces 32-bit instructions (no 'c' extension)
@@ -45,15 +47,3 @@ $(DISK): $(PROGRAMS:%=$(BUILD)/%.bin)
 	# 3. Generate ToC and write to Sector 0
 	python3 generate_toc.py $(PROGRAMS:%=%.bin)
 	dd if=$(BUILD)/toc.bin of=$(DISK) bs=512 count=1 conv=notrunc status=none
-
-# DISK=../disk.img
-# $(DISK): prog1.bin
-# 	dd if=/dev/zero of=$(DISK) bs=1M count=1
-# 	dd if=prog1.bin of=$(DISK) bs=512 seek=1 conv=notrunc
-# 	python3 generate_toc.py
-# 	dd if=toc.bin of=$(DISK) bs=512 count=1 conv=notrunc
-
-# prog1.bin: prog1.s
-# 	riscv64-unknown-elf-gcc -T linker.ld -nostdlib -mcmodel=medany -march=rv64g -mno-relax -o prog1.elf prog1.s
-# 	riscv64-unknown-elf-gcc -nostdlib -march=rv64g -mabi=lp64 -T linker.ld -mcmodel=medany -mno-relax -o prog1.elf prog1.s
-# 	riscv64-unknown-elf-objcopy -O binary prog1.elf prog1.bin

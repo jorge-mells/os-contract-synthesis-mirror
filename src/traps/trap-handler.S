@@ -4,6 +4,11 @@
 #include "../syscalls/handler.h"
 #include "../syscalls/syscalls.h"
 
+// WARN: DON'T TOUCH THIS. SOME ONE WILL PROBABLY DO SO I WON'T SAY WHY. GOOD LUCK DEBUGGING.
+// JUST KIDDING: stupid compiler optimisations as usual. it'll end up using global pointer if you do,
+// which isn't quite correct in here since you're coming from another user program.
+.option norelax 
+
 .section .rodata
   log_exception_msg: .asciz "\nException %u at %p.\n"
   log_interrupt_msg: .asciz "\nInterrupt %u handled.\n"

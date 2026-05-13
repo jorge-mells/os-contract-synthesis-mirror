@@ -5,12 +5,12 @@
 
 void poweroff(void) {
   kputs("Poweroff requested");
-  *(uint32_t *)SYSCON_ADDR = 0x5555;
+  SYSCON_ADDR = POWER_OFF_MAGIC_NUM;
 }
 
 void reboot(void) {
   kputs("Reboot requested");
-  *(uint32_t *)SYSCON_ADDR = 0x7777;
+  SYSCON_ADDR = POWER_RESTART_MAGIC_NUM;
 }
 
 void cleanup_and_exit(void) {

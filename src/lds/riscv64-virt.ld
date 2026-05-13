@@ -204,6 +204,12 @@ SECTIONS
 		            MAX(__DATA_BEGIN__ + 0x800, __BSS_END__ - 0x800));
   _end = .; PROVIDE (end = .);
   . = DATA_SEGMENT_END (.);
+  /* HEAP */
+  STACK_START = ORIGIN(RAM) + STACK_OFFSET;
+  GUARD_HOLE = 0x1000;
+  . = ALIGN(4096);
+  _heap_start = .;
+  _heap_end = (STACK_START - STACK_LENGTH - GUARD_HOLE) & ~(GUARD_HOLE - 1); /* the final bitwise & ensures the heap fits into a page; also note that _stack_top comes after _heap_end */
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }
@@ -252,10 +258,11 @@ SECTIONS
   .debug_sup      0 : { *(.debug_sup) }
   .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
   /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
-  /* HEAP */
-  STACK_START = ORIGIN(RAM) + STACK_OFFSET;
-  GUARD_HOLE = 0x1000;
-  . = ALIGN(4096);
-  _heap_start = .;
-  _heap_end = (STACK_START - STACK_LENGTH - GUARD_HOLE) & ~(GUARD_HOLE - 1); /* the final bitwise & ensures the heap fits into a page; also note that _stack_top comes after _heap_end */
+  /* DISK */
+  . = 0x80100000;
+  .disk 0x80100000 : AT(0x80100000) {
+      _disk_start = .;
+      KEEP(*(.disk_data))
+      _disk_end = .;
+  }
 }

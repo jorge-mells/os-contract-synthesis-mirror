@@ -5,3 +5,4 @@ kmain
 *.bin
 *.elf
 docs/
+qemu.log

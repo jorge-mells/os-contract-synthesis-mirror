@@ -1,10 +1,11 @@
 # Directories
 BUILD=build
 # Build
-CC=riscv64-unknown-elf-gcc
-CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs 
-CFLAGS+=-g -Wl,--gc-sections -mcmodel=medany -march=rv64g
-RUNTIME=src/entrypoint/crt0.s
+CC = riscv64-unknown-elf-gcc
+# CC=/home/jorge/thesis/riscv_tools/bin/riscv-none-elf-gcc
+CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs -static
+CFLAGS+=-g -Wl,-N,--gc-sections -mcmodel=medany -march=rv64imafd
+RUNTIME=src/asm/crt0.s
 LINKER_SCRIPT=src/lds/riscv64-virt.ld
 KERNEL_IMAGE=$(BUILD)/kmain
 
@@ -14,13 +15,15 @@ MACH=virt
 MEM=128M
 RUN=$(QEMU) -nographic -machine $(MACH) -m $(MEM)
 RUN+=-bios none -kernel $(KERNEL_IMAGE) 
-RUN+=-drive file=disk.img,if=none,format=raw,id=hd0
-RUN+=-device virtio-blk-device,drive=hd0 -global virtio-mmio.force-legacy=false
+# uncomment below for an actual virtio disk abstraction
+# RUN+=-drive file=disk.img,if=none,format=raw,id=hd0
+# RUN+=-device virtio-blk-device,drive=hd0 -global virtio-mmio.force-legacy=false
+# RUN+=-device loader,file=disk.img,addr=0x80100000,force-raw=on
 
 # QEMU (debug)
 GDB_PORT=1234
 
-all: setup uart syscon common kmalloc storage-driver loader scheduler traps syscalls handler kmain ## build the kernel and all programs
+all: setup uart syscon common kmalloc storage-driver loader scheduler traps syscalls handler asm kmain ## build the kernel and all programs
 	$(MAKE) all -C ./sample-programs
 	$(CC) $(BUILD)/*.o $(RUNTIME) $(CFLAGS) -T $(LINKER_SCRIPT) -o $(KERNEL_IMAGE)
 
@@ -47,7 +50,7 @@ loader:
 	$(CC) -c src/process-mgmt/loader.c $(CFLAGS) -o $(BUILD)/loader.o
 
 storage-driver:
-	$(CC) -c src/process-mgmt/storage-driver.c $(CFLAGS) -o $(BUILD)/storage-driver.o
+	$(CC) -c src/process-mgmt/storage-driver-ram.c $(CFLAGS) -o $(BUILD)/storage-driver.o
 
 kmalloc:
 	$(CC) -c src/heap-mgmt/kmalloc.c $(CFLAGS) -o $(BUILD)/kmalloc.o
@@ -58,17 +61,23 @@ handler:
 syscalls:
 	$(CC) -c src/syscalls/syscalls.c $(CFLAGS) -o $(BUILD)/syscalls.o
 
+asm:
+	$(CC) -c src/asm/disk.S $(CLFAGS) -o $(BUILD)/disk.o
+	$(CC) -c src/asm/sim.S $(CLFAGS) -o $(BUILD)/sim.o
+
 kmain:
 	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o
 
 run: all ## run the kernel with programs
-	$(RUN) ## -d int,guest_errors -no-reboot
+	$(RUN) -no-reboot -d int,guest_errors,in_asm,int -no-reboot -D qemu.log
 
 debug: all
 	$(RUN) -gdb tcp::$(GDB_PORT) -S
 
 clean: ## remove the build directory
 	$(MAKE) clean -C ./sample-programs
+	rm -vf disk.img
+	rm -vf qemu.log
 	rm -vf $(BUILD)/*.o
 	rm -vf $(KERNEL_IMAGE)
 
