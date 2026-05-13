@@ -30,13 +30,25 @@
  */
 #define CLINT_MTIME    0x0200bff8
 
+#define INTERVAL 1000000
+
 /**
  * @brief System Controller (syscon) address.
  * 
  * Used for power management operations like poweroff and reboot.
  * This address is mapped to the 'test' device in the QEMU virt machine.
  */
-#define SYSCON_ADDR 0x100000UL
+#ifndef __ASSEMBLER__
+#include <stdint.h>
+extern volatile uint64_t tohost;
+extern volatile uint64_t fromhost;
+#endif
+// #define SYSCON_ADDR 0x100000UL
+// make all changes here especially to the type: e.g: #define SYSCON_ADDR (*(volatile uint32_t *)(SYSCON_BASE_ADDR))
+#define SYSCON_ADDR tohost
+// #define POWER_OFF_MAGIC_NUM 0x5555
+#define POWER_OFF_MAGIC_NUM 1
+#define POWER_RESTART_MAGIC_NUM 0x7777
 
 /** @} */
 
@@ -48,10 +60,9 @@
  */
 
 /** @brief Base address of the first peripheral. */
-#define MMIO_START         0x10001000
-
-/** @brief Memory spacing between consecutive device register blocks (4KB). */
-#define MMIO_STEP          0x1000
+#define DISK_START         0x80100000
+/** @brief End address of disk if needed(for disks in ram) */
+#define DISK_END           0x80200000
 
 /** @} */
 
@@ -67,5 +78,5 @@
 /**
  * @brief Use this flag to turn on debug printing
  */
-#define LOG_ENABLED 0
+#define LOG_ENABLED 1
 #endif /* PLATFORM_H */

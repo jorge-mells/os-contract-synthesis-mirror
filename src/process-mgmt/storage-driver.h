@@ -1,6 +1,7 @@
 /**
  * @file storage-driver.h
  * @brief functions to communicate with permanent storage
+ * @note if you want to change the driver, you would also have to fix the makefile, to point to your new driver file.
  */
 #ifndef STORAGE_DRIVER_H
 #define STORAGE_DRIVER_H
