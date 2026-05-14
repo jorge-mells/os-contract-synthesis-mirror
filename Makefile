@@ -23,8 +23,7 @@ RUN+=-bios none -kernel $(KERNEL_IMAGE)
 # QEMU (debug)
 GDB_PORT=1234
 
-all: setup uart syscon common kmalloc storage-driver loader scheduler traps syscalls handler asm kmain ## build the kernel and all programs
-	$(MAKE) all -C ./sample-programs
+all: setup uart syscon common kmalloc storage-driver loader scheduler traps syscalls handler sample-programs asm kmain ## build the kernel and all programs
 	$(CC) $(BUILD)/*.o $(RUNTIME) $(CFLAGS) -T $(LINKER_SCRIPT) -o $(KERNEL_IMAGE)
 
 setup:
@@ -65,6 +64,9 @@ asm:
 	$(CC) -c src/asm/disk.S $(CLFAGS) -o $(BUILD)/disk.o
 	$(CC) -c src/asm/sim.S $(CLFAGS) -o $(BUILD)/sim.o
 
+sample-programs:
+	$(MAKE) all -C ./sample-programs
+
 kmain:
 	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o
 
@@ -81,7 +83,7 @@ clean: ## remove the build directory
 	rm -vf $(BUILD)/*.o
 	rm -vf $(KERNEL_IMAGE)
 
-.PHONY: help
+.PHONY: help sample-programs
 help: ## Show this help message
 	@echo "Usage: make run [PROGRAMS=\"prog1 prog2\"]"
 	@echo "Usage: make [other-targets]"
