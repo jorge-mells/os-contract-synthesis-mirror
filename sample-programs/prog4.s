@@ -7,5 +7,7 @@ _start:
     # simple arbitrary jump
 
     li t0, 0x85001008
+    li t1, 0xFFFFFFFF  # Load a 32-bit mask
+    and t0, t0, t1     # Naturally clears top bits on RV64; does nothing on RV32
     jr t0              # This should trigger an Instruction Access Fault
                        # if your PMP range ends at 0x82001000.

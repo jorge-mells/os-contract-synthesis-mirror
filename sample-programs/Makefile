@@ -5,15 +5,15 @@ DISK=../disk.img
 BUILD=build
 
 # Toolchain configuration
-CC = riscv64-unknown-elf-gcc
-# CC=/home/jorge/thesis/riscv_tools/bin/riscv-none-elf-gcc
-OBJCOPY = riscv64-unknown-elf-objcopy
-# OBJCOPY=/home/jorge/thesis/riscv_tools/bin/riscv-none-elf-objcopy
+# CC = riscv64-unknown-elf-gcc
+CC = $(RISCV)/bin/riscv32-unknown-elf-clang
+# OBJCOPY = riscv64-unknown-elf-objcopy
+OBJCOPY=$(RISCV)/bin/riscv32-unknown-elf-objcopy
 
 # Flags
-# -march=rv64imafd: Forces 32-bit instructions (no 'c' extension)
+# -march=rv64imafd: Forces 32-bit instructions (no 'c'(compressed) extension)
 # -mabi=lp64d: Matches the 64-bit hardware floating point ABI
-CFLAGS = -T linker.ld -nostdlib -mcmodel=medany -march=rv64imafd -mabi=lp64d -mno-relax
+CFLAGS = -g -T linker.ld -nostdlib -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -mno-relax
 
 # Default target: build all binaries
 all: $(DISK) 

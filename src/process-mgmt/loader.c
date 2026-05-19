@@ -8,8 +8,8 @@ void load_prg_info() {
     total_prog_count = *(uint64_t*)toc_buffer;
 }
 
-void load_program(const uint8_t start_sector, uint64_t load_address) {
+void load_program(const uint64_t start_sector, uint64_t load_address) {
     for (int i = 0; i < 8; i++) {
-        disk_read(start_sector + i, (void *) (load_address + (i * 512)));
+        disk_read(start_sector + i, (void *)(uintptr_t) (load_address + (i * 512)));
     }
 }

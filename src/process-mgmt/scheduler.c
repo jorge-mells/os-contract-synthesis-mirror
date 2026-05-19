@@ -5,7 +5,7 @@
 #include "scheduler.h"
 #include "../uart/uart.h"
 
-uint64_t kernel_sp, kernel_gp;
+uintptr_t kernel_sp, kernel_gp;
 pcb_t pcb_table[MAX_PROCS];
 pcb_t *current_running_pcb;
 
@@ -116,7 +116,7 @@ void remove_memory_protections() {
 }
 
 /**
- * @brief Round-Robin Task Selector.
+ * @brief Task Selector.
  * 
  * Cycles through the @ref pcb_table to pick the next task to execute.
  * 
@@ -127,7 +127,7 @@ void remove_memory_protections() {
  * @important The return value determines whether the kernel should resume 
  *            execution or exit.
  */
-int simple_round_robin() {
+int task_selector() {
     // 2. Find the next READY process using Round Robin
     // We start searching at the NEXT index after the current one
     int current_idx = (int)(current_running_pcb - &pcb_table[0]);
@@ -169,9 +169,9 @@ void scheduler() {
         remove_memory_protections();
     }
 
-    int status = simple_round_robin();
+    int status = task_selector();
     if (status) {
-        klog("\nSwitching to Process %u...\n", current_running_pcb->pid);
+        klog("\nSwitching to Process %u...\n", (uintptr_t)current_running_pcb->pid);
         return;
     }
 

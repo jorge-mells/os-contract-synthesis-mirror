@@ -6,3 +6,4 @@ kmain
 *.elf
 docs/
 qemu.log
+gdb_init

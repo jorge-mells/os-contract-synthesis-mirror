@@ -85,8 +85,8 @@ typedef enum {
  */
 typedef struct {
   pmp_mode_t mode;   /**< The matching mode (e.g., TOR, NAPOT). */
-  uint64_t pmpaddr0; /**< Starting boundary or base address. */
-  uint64_t pmpaddr1; /**< Ending boundary (primarily for TOR mode). */
+  uintptr_t pmpaddr0; /**< Starting boundary or base address. */
+  uintptr_t pmpaddr1; /**< Ending boundary (primarily for TOR mode). */
 } pmpinfo_t;
 
 /**
@@ -100,7 +100,7 @@ typedef struct {
  * @param end_addr   The end of the protected region.
  * @return A populated @ref pmpinfo_t structure ready for hardware application.
  */
-pmpinfo_t pmp_compute_encoding(pmp_mode_t mode, uint64_t start_addr, uint64_t end_addr);
+pmpinfo_t pmp_compute_encoding(pmp_mode_t mode, uintptr_t start_addr, uintptr_t end_addr);
 
 /**
  * @brief Low-level hardware interface to write a PMP configuration byte.
@@ -116,7 +116,7 @@ void set_pmp_cfg(uint8_t index, uint8_t cfg_byte);
 /**
  * @brief Direct hardware write to a PMP address register.
  * 
- * Uses inline assembly to write a 64-bit address (shifted) to the 
+ * Uses inline assembly to write an address (shifted) to the 
  * specified CSR. 
  * @param index The CSR index (e.g., 0 for pmpaddr0).
  * @param addr  The encoded address value.

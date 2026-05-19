@@ -43,7 +43,7 @@ extern uintptr_t kernel_gp;
  * 
  * @note Find masks for the various bits of mstatus and mie in traps.h
  */
-void setup_traps(uint64_t mstatus_mask, uint64_t mie_mask, uintptr_t trap_entry);
+void setup_traps(uintptr_t mstatus_mask, uintptr_t mie_mask, uintptr_t trap_entry);
 
 /**
  * @brief Low level assembly handler for hardware traps

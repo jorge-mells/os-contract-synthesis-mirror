@@ -40,11 +40,10 @@
  */
 #ifndef __ASSEMBLER__
 #include <stdint.h>
-extern volatile uint64_t tohost;
-extern volatile uint64_t fromhost;
+extern volatile uintptr_t tohost;
+extern volatile uintptr_t fromhost;
 #endif
-// #define SYSCON_ADDR 0x100000UL
-// make all changes here especially to the type: e.g: #define SYSCON_ADDR (*(volatile uint32_t *)(SYSCON_BASE_ADDR))
+// #define SYSCON_ADDR *(volatile uint32_t *)0x100000UL
 #define SYSCON_ADDR tohost
 // #define POWER_OFF_MAGIC_NUM 0x5555
 #define POWER_OFF_MAGIC_NUM 1
@@ -79,4 +78,17 @@ extern volatile uint64_t fromhost;
  * @brief Use this flag to turn on debug printing
  */
 #define LOG_ENABLED 1
+
+#if __riscv_xlen == 64
+  #define LREG ld
+  #define SREG sd
+  #define REGBYTES 8
+#else
+  #define LREG lw
+  #define SREG sw
+  #define REGBYTES 4
+#endif
+
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
 #endif /* PLATFORM_H */

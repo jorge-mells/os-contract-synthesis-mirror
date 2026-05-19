@@ -19,7 +19,7 @@
  * @param count The number of bytes to write.
  * @return      The number of bytes successfully written.
  */
-uint64_t write(uint64_t fd, const char* buff, size_t count);
+uintptr_t write(uintptr_t fd, const char* buff, size_t count);
 
 /**
  * @brief Terminates the current process.
@@ -30,7 +30,7 @@ uint64_t write(uint64_t fd, const char* buff, size_t count);
  * 
  * @param status The exit code returned to the parent or kernel.
  */
-void sys_exit(uint64_t status);
+void sys_exit(uintptr_t status);
 #endif
 
 #endif

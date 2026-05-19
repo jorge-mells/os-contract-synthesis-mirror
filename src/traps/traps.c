@@ -11,14 +11,14 @@ void setup_traps(uintptr_t mstatus_mask, uintptr_t mie_mask, uintptr_t trap_entr
     );
 }
 
-__attribute__((naked, noreturn)) 
+__attribute__((noreturn)) 
 void run_first_program(void) {
     // 1. Timer Logic - Pure C
     uintptr_t mstatus_val;
     asm volatile("csrr %0, mstatus" : "=r"(mstatus_val));
 
     if (mstatus_val & MIE_MTIE) {
-        *(volatile uint64_t*)CLINT_MTIMECMP = *(volatile uint64_t*)CLINT_MTIME + current_running_pcb->time_slice;
+        *(volatile uintptr_t*)CLINT_MTIMECMP = *(volatile uintptr_t*)CLINT_MTIME + current_running_pcb->time_slice;
     }
 
     // 2. The Handover
@@ -26,8 +26,8 @@ void run_first_program(void) {
     // kernel_sp, kernel_gp, and the PCB struct members for us.
     asm volatile (
         // --- SAVE KERNEL CONTEXT ---
-        "sd sp, %3\n\t"         // Save current SP to kernel_sp variable
-        "sd gp, %4\n\t"         // Save current GP to kernel_gp variable
+        STR(SREG) " sp, %3\n\t"         // Save current SP to kernel_sp variable
+        STR(SREG) " gp, %4\n\t"         // Save current GP to kernel_gp variable
 
         // --- SETUP FOR USER MODE ---
         "csrw mepc, %0\n\t"     // Set the jump target (User PC)
@@ -43,4 +43,5 @@ void run_first_program(void) {
           "m"(kernel_gp)        // %4: The memory location of kernel_gp
         : "memory"
     );
+    __builtin_unreachable();
 }

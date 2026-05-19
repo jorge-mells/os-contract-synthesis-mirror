@@ -42,62 +42,62 @@ main_trap_handler:
   # store sp for user before doing anything else
   csrw mscratch, sp 
   la sp, current_running_pcb
-  ld sp, 0(sp)
+  LREG sp, 0(sp)
   addi sp, sp, PCB_CONTEXT_BASE # get address of context base
 
   # store pcb regs
-  sd x0, 0(sp)
-  sd x1, 8(sp)
-  # sd x2, 16(sp)
-  sd x3, 24(sp)
-  sd x4, 32(sp)
-  sd x5, 40(sp)
-  sd x6, 48(sp)
-  sd x7, 56(sp)
-  sd x8, 64(sp)
-  sd x9, 72(sp)
-  sd x10, 80(sp)
-  sd x11, 88(sp)
-  sd x12, 96(sp)
-  sd x13, 104(sp)
-  sd x14, 112(sp)
-  sd x15, 120(sp)
-  sd x16, 128(sp)
-  sd x17, 136(sp)
-  sd x18, 144(sp)
-  sd x19, 152(sp)
-  sd x20, 160(sp)
-  sd x21, 168(sp)
-  sd x22, 176(sp)
-  sd x23, 184(sp)
-  sd x24, 192(sp)
-  sd x25, 200(sp)
-  sd x26, 208(sp)
-  sd x27, 216(sp)
-  sd x28, 224(sp)
-  sd x29, 232(sp)
-  sd x30, 240(sp)
-  sd x31, 248(sp)
+  SREG x0, 0(sp)
+  SREG x1, 8(sp)
+  # SREG x2, 16(sp)
+  SREG x3, 24(sp)
+  SREG x4, 32(sp)
+  SREG x5, 40(sp)
+  SREG x6, 48(sp)
+  SREG x7, 56(sp)
+  SREG x8, 64(sp)
+  SREG x9, 72(sp)
+  SREG x10, 80(sp)
+  SREG x11, 88(sp)
+  SREG x12, 96(sp)
+  SREG x13, 104(sp)
+  SREG x14, 112(sp)
+  SREG x15, 120(sp)
+  SREG x16, 128(sp)
+  SREG x17, 136(sp)
+  SREG x18, 144(sp)
+  SREG x19, 152(sp)
+  SREG x20, 160(sp)
+  SREG x21, 168(sp)
+  SREG x22, 176(sp)
+  SREG x23, 184(sp)
+  SREG x24, 192(sp)
+  SREG x25, 200(sp)
+  SREG x26, 208(sp)
+  SREG x27, 216(sp)
+  SREG x28, 224(sp)
+  SREG x29, 232(sp)
+  SREG x30, 240(sp)
+  SREG x31, 248(sp)
 
   # store user sp in pcb
   mv t0, sp
   csrr sp, mscratch # get user sp back
-  sd x2, 16(t0)
+  SREG x2, 16(t0)
 
   # save user pc; so that syscalls and other code can access and modify this as required
   la t0, current_running_pcb   # Get address of the pointer
-  ld t0, 0(t0)                 # t0 now holds the actual base address of the PCB
+  LREG t0, 0(t0)                 # t0 now holds the actual base address of the PCB
   # Calculate the specific address within the PCB for the PC
   addi t1, t0, PCB_PC          # t1 = address of pcb->pc
   # Save the exception program counter (user's PC) into the PCB
   csrr t0, mepc          # CSR Read: t0 = mepc
-  sd t0, 0(t1)           # Store t0 into the address held in t1 (pcb->pc)
+  SREG t0, 0(t1)           # Store t0 into the address held in t1 (pcb->pc)
 
   # load kernel stack pointer and gp
   la t0, kernel_sp
-  ld sp, 0(t0)
+  LREG sp, 0(t0)
   la t0, kernel_gp
-  ld gp, 0(t0)
+  LREG gp, 0(t0)
 
   # jump to right handler if interrupt or exception
   csrr a1, mcause
@@ -108,14 +108,18 @@ main_trap_handler:
   la a0, log_exception_msg
   # clear the msb to get the pure id
   csrr a1, mcause
-  li s0, 0x7fffffffffffffff
+  # li s0, 0x7fffffffffffffff
+  li s0, -1 # better version of the above to support 32/64 bit systems
+  srli s0, s0, 1
   and a1, a1, s0
   csrr a2, mepc
   call klog
 
   # klog messes up aX regs hence I reload
   csrr a1, mcause
-  li s0, 0x7fffffffffffffff
+  # li s0, 0x7fffffffffffffff
+  li s0, -1 # better version of the above to support 32/64 bit systems
+  srli s0, s0, 1
   and a1, a1, s0
 
   # jump to right exception handler
@@ -139,13 +143,17 @@ main_trap_handler:
   la a0, log_interrupt_msg
   # clear the msb to get the pure id
   csrr a1, mcause
-  li s0, 0x7fffffffffffffff
+  # li s0, 0x7fffffffffffffff
+  li s0, -1 # better version of the above to support 32/64 bit systems
+  srli s0, s0, 1
   and a1, a1, s0
   call klog
 
   # klog messes up aX regs
   csrr a1, mcause
-  li s0, 0x7fffffffffffffff
+  # li s0, 0x7fffffffffffffff
+  li s0, -1 # better version of the above to support 32/64 bit systems
+  srli s0, s0, 1
   and a1, a1, s0
 
   # jump to right interrupt handler
@@ -171,12 +179,12 @@ main_trap_handler:
   # get the time slice from the NEW current_running_pcb
   la s5, current_running_pcb
   add s5, s5, PCB_TIME_SLICE
-  ld s5, 0(s5)
-  ld s5, 0(s5)
+  LREG s5, 0(s5)
+  LREG s5, 0(s5)
   # calculate and set the new alarm
-  ld s4, 0(s3) # s4 = current mtime
+  LREG s4, 0(s3) # s4 = current mtime
   add s4, s4, s5 # s4 = mtime + time_slice
-  sd s4, 0(s2) # mtimecmp = s4
+  SREG s4, 0(s2) # mtimecmp = s4
   
   j .end_main_trap_handler
 
@@ -187,59 +195,59 @@ main_trap_handler:
   # load pc
   # 1. Get the base address of the current PCB
   la t0, current_running_pcb
-  ld t0, 0(t0)                 # t0 = pointer to current PCB
+  LREG t0, 0(t0)                 # t0 = pointer to current PCB
   # 2. Load the saved PC value from the PCB into a scratch register
   # Using the same PCB_PC offset used during the save
-  ld t1, PCB_PC(t0)            # t1 = pcb->pc
+  LREG t1, PCB_PC(t0)            # t1 = pcb->pc
   # 3. Write the value into the Machine Exception Program Counter
   csrw mepc, t1
 
   # save kernel stack pointer and global pointer
   la t0, kernel_sp
-  sd sp, 0(t0)
+  SREG sp, 0(t0)
   la t0, kernel_gp
-  sd gp, 0(t0)
+  SREG gp, 0(t0)
 
   # get location of regs stored
   la sp, current_running_pcb
-  ld sp, 0(sp)
+  LREG sp, 0(sp)
   addi sp, sp, PCB_CONTEXT_BASE
 
   # epilogue
-  ld x0, 0(sp)
-  ld x1, 8(sp)
+  LREG x0, 0(sp)
+  LREG x1, 8(sp)
   # ld x2, 16(sp)
-  ld x3, 24(sp)
-  ld x4, 32(sp)
-  ld x5, 40(sp)
-  ld x6, 48(sp)
-  ld x7, 56(sp)
-  ld x8, 64(sp)
-  ld x9, 72(sp)
-  ld x10, 80(sp)
-  ld x11, 88(sp)
-  ld x12, 96(sp)
-  ld x13, 104(sp)
-  ld x14, 112(sp)
-  ld x15, 120(sp)
-  ld x16, 128(sp)
-  ld x17, 136(sp)
-  ld x18, 144(sp)
-  ld x19, 152(sp)
-  ld x20, 160(sp)
-  ld x21, 168(sp)
-  ld x22, 176(sp)
-  ld x23, 184(sp)
-  ld x24, 192(sp)
-  ld x25, 200(sp)
-  ld x26, 208(sp)
-  ld x27, 216(sp)
-  ld x28, 224(sp)
-  ld x29, 232(sp)
-  ld x30, 240(sp)
-  ld x31, 248(sp)
+  LREG x3, 24(sp)
+  LREG x4, 32(sp)
+  LREG x5, 40(sp)
+  LREG x6, 48(sp)
+  LREG x7, 56(sp)
+  LREG x8, 64(sp)
+  LREG x9, 72(sp)
+  LREG x10, 80(sp)
+  LREG x11, 88(sp)
+  LREG x12, 96(sp)
+  LREG x13, 104(sp)
+  LREG x14, 112(sp)
+  LREG x15, 120(sp)
+  LREG x16, 128(sp)
+  LREG x17, 136(sp)
+  LREG x18, 144(sp)
+  LREG x19, 152(sp)
+  LREG x20, 160(sp)
+  LREG x21, 168(sp)
+  LREG x22, 176(sp)
+  LREG x23, 184(sp)
+  LREG x24, 192(sp)
+  LREG x25, 200(sp)
+  LREG x26, 208(sp)
+  LREG x27, 216(sp)
+  LREG x28, 224(sp)
+  LREG x29, 232(sp)
+  LREG x30, 240(sp)
+  LREG x31, 248(sp)
   # addi sp, sp, 256
 
   # load user sp back
-  ld x2, 16(sp)
+  LREG x2, 16(sp)
   mret
