@@ -6,7 +6,7 @@ void init_disk() {
 }
 
 void disk_read(uint64_t sector_number, void *buffer) {
-    uint64_t *source = (uint64_t *)(DISK_START + (sector_number * 512));
+    uint64_t *source = (uint64_t *)(uintptr_t)(DISK_START + (sector_number * 512));
     
     // Check if the destination is 8-byte aligned
     if (((uintptr_t)buffer & 0x7) == 0) {

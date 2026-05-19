@@ -63,8 +63,8 @@ typedef struct pcb {
     
 } pcb_t;
 
-extern uint64_t kernel_sp; // maybe replace these later with an actual pcb for the kernel
-extern uint64_t kernel_gp;
+extern uintptr_t kernel_sp; // maybe replace these later with an actual pcb for the kernel
+extern uintptr_t kernel_gp;
 
 /**
  * @brief Global process table.
