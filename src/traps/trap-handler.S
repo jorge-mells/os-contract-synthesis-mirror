@@ -32,7 +32,7 @@
 ##############################
 ###### Function call #########
 ##############################
-.align 4
+.align 8
 # NOTE: unimplemented interrupt/exception blocks just exit(poweroff) the kernel
 main_trap_handler:
   # prologue

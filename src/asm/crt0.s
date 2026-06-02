@@ -1,6 +1,9 @@
 .section .init, "ax"
 .global _start
 _start:
+  .rept 32          # 32 instructions = 128 bytes (adjust as needed)
+  nop
+  .endr
 #   csrr t0, misa
 #   srli t0, t0, 30
 #   li t1, 1
