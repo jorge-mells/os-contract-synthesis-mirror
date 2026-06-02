@@ -16,7 +16,8 @@ Before running the OS, ensure you have the necessary cross-compilation toolchain
 
 ## Usage & Customization
 *   **Test Sample Programs:** Place your source files in [sample-programs/](sample-programs/) and execute:
-    `make run PROGRAMS='prog1 prog2 *'`
+    `make run PLATFORM=CVA6|IBEX|QEMU`
+> See the makefile for more customisations. Find the outputs for cva6 and ibex in simulators/output
 *   **Syscall Support:** Programs using unsupported features or complex syscalls may exit prematurely or fail to execute.
 *   **Modify Scheduling:** You can experiment with different scheduling algorithms by editing [src/process-mgmt/scheduler.c](src/process-mgmt/scheduler.c).
 

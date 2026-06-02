@@ -3,7 +3,7 @@
 #include "../common/common.h"
 #include "../syscon/syscon.h"
 #include "../process-mgmt/scheduler.h"
-uint64_t write(uint64_t fd, const char* buff, size_t count) {
+uintptr_t write(uintptr_t fd, const char* buff, size_t count) {
 
     if (fd == 1) { // stdout
         klog("User Code: ");
@@ -16,9 +16,9 @@ uint64_t write(uint64_t fd, const char* buff, size_t count) {
     return -1;
 }
 
-void sys_exit(uint64_t status) {
+void sys_exit(uintptr_t status) {
     // 1. Log the exit for debugging (optional)
-    uint64_t pid = current_running_pcb->pid;
+    uintptr_t pid = current_running_pcb->pid;
     klog("\n[Process %u Exited with status %u]\n", pid, status);
     current_running_pcb->state = PCB_STATE_UNUSED;
     scheduler();
