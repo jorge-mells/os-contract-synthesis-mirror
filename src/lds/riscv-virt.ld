@@ -3,13 +3,16 @@
    Copying and distribution of this script, with or without modification,
    are permitted in any medium without royalty provided the copyright
    notice and this notice are preserved.  */
-OUTPUT_FORMAT("elf64-littleriscv", "elf64-littleriscv",
-	      "elf64-littleriscv")
 OUTPUT_ARCH(riscv)
+/* maybe later find a way to move this to platform.h and this accesses that from there. */
+/* BASE_ADDR = 0x00000000; */
+
+/* maybe later find a way to move this to platform.h and this accesses that from there. */ /* qemu & cva6 */
+PROVIDE(BASE_ADDR = 0x80000000);
 MEMORY
 {
-   /* qemu-system-risc64 virt machine */
-   RAM (rwx)  : ORIGIN = 0x80000000, LENGTH = 128M 
+   /* qemu-system-risc32 virt machine */
+   RAM (rwx)  : ORIGIN = BASE_ADDR, LENGTH = 128M
 }
 ENTRY(_start)
 SEARCH_DIR("=/home/dsleung/opt/cross/riscv64-elf/lib"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
@@ -17,7 +20,8 @@ SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x10000)); . = SEGMENT_START("text-segment", 0x10000) + SIZEOF_HEADERS;
-  STACK_OFFSET = 0x100000, STACK_LENGTH = 0x4000;
+  STACK_OFFSET = 0x100000;
+  STACK_LENGTH = 0x4000;
   PROVIDE(__stack_top = ORIGIN(RAM) + STACK_OFFSET);
   .interp         : { *(.interp) }
   .note.gnu.build-id  : { *(.note.gnu.build-id) }
@@ -259,10 +263,12 @@ SECTIONS
   .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
   /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
   /* DISK */
-  . = 0x80100000;
-  .disk 0x80100000 : AT(0x80100000) {
+  DISK_START = BASE_ADDR + 0x100000;
+  . = DISK_START;
+  .disk DISK_START : AT(DISK_START) {
       _disk_start = .;
       KEEP(*(.disk_data))
+      . = ALIGN(0x1000);
       _disk_end = .;
   }
 }

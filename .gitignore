@@ -6,3 +6,5 @@ kmain
 *.elf
 docs/
 qemu.log
+*.hex
+simulators/outputs

@@ -25,7 +25,7 @@ void klog(const char *format, ...) {
 }
 
 
-pmpinfo_t pmp_compute_encoding(pmp_mode_t mode, uint64_t start_addr, uint64_t end_addr) {
+pmpinfo_t pmp_compute_encoding(pmp_mode_t mode, uintptr_t start_addr, uintptr_t end_addr) {
   // check stuff satisfied for napot and if not just panic
   // conversion code
   pmpinfo_t info;
@@ -33,7 +33,7 @@ pmpinfo_t pmp_compute_encoding(pmp_mode_t mode, uint64_t start_addr, uint64_t en
   info.pmpaddr0 = 0;
   info.pmpaddr1 = 0;
 
-  uint64_t size = end_addr - start_addr;
+  uintptr_t size = end_addr - start_addr;
 
   switch (mode) {
       case PMP_NAPOT:
@@ -71,15 +71,15 @@ pmpinfo_t pmp_compute_encoding(pmp_mode_t mode, uint64_t start_addr, uint64_t en
 void set_pmp_cfg(uint8_t index, uint8_t cfg_byte) {
   uint8_t reg_idx = (index < 8) ? 0 : 2; // pmpcfg0 or pmpcfg2
   uint8_t shift = (index % 8) * 8;
-  uint64_t val;
+  uintptr_t val;
 
   if (reg_idx == 0) {
       asm volatile("csrr %0, pmpcfg0" : "=r"(val));
-      val = (val & ~(0xFFULL << shift)) | ((uint64_t)cfg_byte << shift);
+      val = (val & ~(0xFFULL << shift)) | ((uintptr_t)cfg_byte << shift);
       asm volatile("csrw pmpcfg0, %0" : : "r"(val));
   } else {
       asm volatile("csrr %0, pmpcfg2" : "=r"(val));
-      val = (val & ~(0xFFULL << shift)) | ((uint64_t)cfg_byte << shift);
+      val = (val & ~(0xFFULL << shift)) | ((uintptr_t)cfg_byte << shift);
       asm volatile("csrw pmpcfg2, %0" : : "r"(val));
   }
 }

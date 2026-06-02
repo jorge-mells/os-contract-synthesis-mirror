@@ -39,5 +39,5 @@ void load_prg_info();
  * @warning Each program is assumed to be of fixed size and is stored in 8 sectors!
  * @see linker.ld to find out the size of each program
  */
-void load_program(const uint8_t start_sector, uint64_t load_address);
+void load_program(const uint64_t start_sector, uint64_t load_address);
 #endif
