@@ -6,9 +6,10 @@ BUILD=build
 
 # Toolchain configuration
 # CC = riscv64-unknown-elf-gcc
-CC = $(RISCV)/bin/riscv32-unknown-elf-clang
+CC = $(RISCV)/bin/$(PREFIX)$(COMPILER)
 # OBJCOPY = riscv64-unknown-elf-objcopy
 OBJCOPY=$(RISCV)/bin/riscv32-unknown-elf-objcopy
+OBJCOPY = $(RISCV)/bin/$(PREFIX)objcopy
 
 # Flags
 # -march=rv64imafd: Forces 32-bit instructions (no 'c'(compressed) extension)

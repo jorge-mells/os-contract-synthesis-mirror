@@ -1,5 +1,22 @@
-# Directories
+# cpu/riscv emulator being targeted
+PLATFORM ?= QEMU
 XLEN?=64
+LD_ADDR = 0x80000000
+# Map names to numbers
+ifeq ($(PLATFORM),IBEX)
+    PLATFORM_ID = 1
+	XLEN=32
+	LD_ADDR = 0x00000000
+else ifeq ($(PLATFORM),CVA6)
+    PLATFORM_ID = 2
+	XLEN=64
+else ifeq ($(PLATFORM),QEMU)
+    PLATFORM_ID = 3
+else
+    PLATFORM_ID = 0 # Default/Error
+endif
+
+# Directories
 ifeq ($(XLEN), 64)
     MABI = lp64d
 else
@@ -13,25 +30,36 @@ endif
 BUILD=build
 # Build
 # CC = riscv64-unknown-elf-gcc
-CC = $(RISCV)/bin/riscv32-unknown-elf-clang
+COMPILER?=gcc
+PREFIX?=riscv64-unknown-elf-
+RISCV?=/usr
+CC = $(RISCV)/bin/$(PREFIX)$(COMPILER)
 CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs -static
-CFLAGS+=-mno-relax -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI)
+CFLAGS+=-mno-relax -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -DPLATFORM_ID=$(PLATFORM_ID)
 # note that you might have to specify endianness in certain cpu's. note this for debugging purposes
-LDFLAGS=-g -Wl,-N,--gc-sections,--oformat,$(TARGET_FORMAT)
+LDFLAGS=-g -Wl,-N,--gc-sections,--oformat,$(TARGET_FORMAT),--defsym=BASE_ADDR=$(LD_ADDR)
 RUNTIME=src/asm/crt0.s
 LINKER_SCRIPT=src/lds/riscv-virt.ld
 KERNEL_IMAGE=$(BUILD)/kmain
 
+ifeq ($(PLATFORM), CVA6)
+RUN=./scripts/cva6-sim.sh
+else ifeq ($(PLATFORM), IBEX)
+RUN=./scripts/ibex-sim.sh
+else
 # QEMU
 QEMU=qemu-system-riscv$(XLEN)
 MACH=virt
 MEM=128M
 RUN=$(QEMU) -nographic -machine $(MACH) -m $(MEM)
 RUN+=-bios none -kernel $(KERNEL_IMAGE) 
+RUN+=-no-reboot -d int,guest_errors,in_asm,int -no-reboot -D qemu.log
 # uncomment below for an actual virtio disk abstraction
 # RUN+=-drive file=disk.img,if=none,format=raw,id=hd0
 # RUN+=-device virtio-blk-device,drive=hd0 -global virtio-mmio.force-legacy=false
-# RUN+=-device loader,file=disk.img,addr=0x80100000,force-raw=on
+# RUN+=-device loader,file=disk.img,addr=0x00100000,force-raw=on
+endif
+
 
 # QEMU (debug)
 GDB_PORT=1234
@@ -78,13 +106,13 @@ asm:
 	$(CC) -c src/asm/sim.S $(CFLAGS) -o $(BUILD)/sim.o
 
 sample-programs:
-	$(MAKE) all -C ./sample-programs XLEN=$(XLEN) MABI=$(MABI)
+	$(MAKE) all -C ./sample-programs XLEN=$(XLEN) MABI=$(MABI) COMPILER=$(COMPILER) PREFIX=$(PREFIX) RISCV=$(RISCV)
 
 kmain:
 	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o
 
 run: all ## run the kernel with programs
-	$(RUN) -no-reboot -d int,guest_errors,in_asm,int -no-reboot -D qemu.log
+	$(RUN)
 
 debug: all
 	$(RUN) -gdb tcp::$(GDB_PORT) -S
@@ -95,9 +123,14 @@ clean: ## remove the build directory
 	rm -vf qemu.log
 	rm -vf $(BUILD)/*.o
 	rm -vf $(KERNEL_IMAGE)
+	rm -rvf simulators/output
+
+clean-sim:
+	rm -rvf simulators/output/$(PLATFORM)
 
 .PHONY: help sample-programs
 help: ## Show this help message
+	@echo "Ensure that the following variables are set: RISCV(e.g: /opt/riscv), PREFIX(e.g: riscv32-unknown-elf-), COMPILER(optional)(clang or gcc)"
 	@echo "Usage: make run [PROGRAMS=\"prog1 prog2\"] [XLEN=xlen]"
 	@echo "Usage: make [other-targets]"
 	@echo ""
