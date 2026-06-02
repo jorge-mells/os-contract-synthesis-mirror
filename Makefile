@@ -121,7 +121,7 @@ clean: ## remove the build directory
 	rm -vf qemu.log
 	rm -vf $(BUILD)/*.o
 	rm -vf $(KERNEL_IMAGE)
-	rm -rvf simulators/output
+	rm -rvf simulators/outputs
 
 clean-sim:
 	rm -rvf simulators/output/$(PLATFORM)
