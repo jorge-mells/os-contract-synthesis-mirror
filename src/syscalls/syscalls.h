@@ -31,6 +31,12 @@ uintptr_t write(uintptr_t fd, const char* buff, size_t count);
  * @param status The exit code returned to the parent or kernel.
  */
 void sys_exit(uintptr_t status);
+
+/* yield control back to the scheduler */
+uintptr_t sched_yield(void);
+
+/* return the lower 32 bits of mtime */
+uint32_t custom_get_mtime_lower();
 #endif
 
 #endif

@@ -23,7 +23,8 @@ pcb_t *current_running_pcb;
  */
 uint64_t next_prog_id = -1;
 
-void load_programs(uint64_t start_addr, uint64_t space_allocated, uint8_t num_requested) {
+// a 'closer to real world' implementation of load_programs. Use this if you want to also 'simulate disks'
+void load_programs_impl(uint64_t start_addr, uint64_t space_allocated, uint8_t num_requested) {
     uint64_t total_progs_on_disk = total_prog_count;
     
     // 1. Check if we've already finished the disk
@@ -92,6 +93,49 @@ void load_programs(uint64_t start_addr, uint64_t space_allocated, uint8_t num_re
     }
 }
 
+void load_programs(uint64_t start_addr, uint64_t space_allocated, uint8_t num_requested) {
+    uint64_t total_progs_on_disk = total_prog_count;
+    
+    // 1. Check if we've already finished the disk
+    // If next_prog_id was 5 and we have 5 progs, we're done.
+    if (next_prog_id != -1 && (uint64_t)next_prog_id >= total_progs_on_disk) {
+        return; 
+    }
+
+    // 2. Initialize our bookmark if this is the first ever call
+    if (next_prog_id == -1) {
+        next_prog_id = 0;
+    }
+
+    for (int pcb_idx = 0; pcb_idx < 2; pcb_idx++) {
+        
+        // Calculate the base address based on the index
+        uint64_t block_base = start_addr + (pcb_idx * BLOCK_SIZE);
+
+        // Safety check: is this within the space we were told we have?
+        if ((pcb_idx + 1) * BLOCK_SIZE > space_allocated) {
+            panic("programs are larger than space allocated"); 
+        }
+        
+        // Initialize PCB
+        pcb_t *p = &pcb_table[pcb_idx];
+        p->time_slice = INTERVAL;
+        p->pid = pcb_idx; 
+        p->state = PCB_STATE_READY;    // Ready state
+        p->pc = block_base;       // Entry point
+        
+        // 3. Context / Registers
+        for(int reg = 0; reg < 32; reg++) p->context[reg] = 0;
+
+        // 4. Stack Pointer (x2/sp)
+        p->context[2] = block_base + PROG_SIZE + STACK_SIZE;
+
+        // set base_addr
+        p->base_addr = block_base;
+        next_prog_id++;
+    }
+}
+
 void add_memory_protections() {
     // 1. Get the base address of the current process's memory
     uint64_t start = current_running_pcb->base_addr;
@@ -107,12 +151,15 @@ void add_memory_protections() {
     // Entry 1 (Floor) to Entry 2 (Top): NO permissions for the guard area
     // This will trigger an Exception 1/5/7 if the stack grows into it
     PMP_SET_TOR(1, 2, 0, usable_end, block_end);
+    // NEW: Expose MTIME as Read-Only to User-mode (Entry 2)
+    PMP_SET_TOR(2, 3, PMP_READ, CLINT_MTIME, CLINT_MTIME + 8);
 }
 
 void remove_memory_protections() {
     // Setting the config to 0 (PMP_OFF) disables the range check
     PMP_SET_TOR(0, 1, 0, 0, 0);
     PMP_SET_TOR(1, 2, 0, 0, 0);
+    PMP_SET_TOR(2, 3, 0, 0, 0); // Disable the timer entry
 }
 
 /**

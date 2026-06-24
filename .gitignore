@@ -8,3 +8,5 @@ docs/
 qemu.log
 *.hex
 simulators/outputs
+compile_commands.json
+.venv

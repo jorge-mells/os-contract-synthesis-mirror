@@ -13,7 +13,8 @@
 // Force the start to the next 4KB boundary so that user code doesn't need to be concerned about alignment
 // #define USER_SPACE_START  (((uintptr_t)__stack_top + 4095) & ~4095)
 // use this for an in memory disk abstraction
-#define USER_SPACE_START     ((DISK_END + 4095) & ~4095)
+// #define USER_SPACE_START     ((DISK_END + 4095) & ~4095)
+#define USER_SPACE_START     DISK_START
 
 // NOTE: there are still lots of magic numbers littered in this codebase. The code is also quite messy but should hopefully be not too hard to follow
 void kmain(void) {

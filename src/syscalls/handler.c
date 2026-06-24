@@ -25,7 +25,22 @@ void handle_syscall() {
             break;
         }
 
+        case 124: {
+            current_running_pcb->pc = current_running_pcb->pc + 4;
+            current_running_pcb->context[10] = sched_yield();
+
+            break;
+        }
+
+        case 500: {
+            current_running_pcb->pc = current_running_pcb->pc + 4;
+            current_running_pcb->context[10] = custom_get_mtime_lower();
+
+            break;
+        }
+
         default:
+            klog("\nUnimplemented Syscall. Exiting...\n");
             sys_exit(1);
             break;
     }

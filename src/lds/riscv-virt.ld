@@ -8,6 +8,11 @@ OUTPUT_ARCH(riscv)
 /* BASE_ADDR = 0x00000000; */
 
 /* maybe later find a way to move this to platform.h and this accesses that from there. */ /* qemu & cva6 */
+PHDRS {
+    /* Define headers: PT_LOAD means it's a block the loader must put in RAM */
+    /* FLAGS(5) = Read (4) + Execute (1) */
+    disk_seg PT_LOAD FLAGS(5); 
+}
 PROVIDE(BASE_ADDR = 0x80000000);
 MEMORY
 {
@@ -266,9 +271,9 @@ SECTIONS
   DISK_START = BASE_ADDR + 0x100000;
   . = DISK_START;
   .disk DISK_START : AT(DISK_START) {
-      _disk_start = .;
+      PROVIDE(_disk_start = .);
       KEEP(*(.disk_data))
       . = ALIGN(0x1000);
       _disk_end = .;
-  }
+  } :disk_seg
 }

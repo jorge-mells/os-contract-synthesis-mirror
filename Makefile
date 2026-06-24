@@ -31,6 +31,7 @@ BUILD=build
 COMPILER?=gcc
 PREFIX?=riscv64-unknown-elf-
 RISCV?=/usr
+OBJCOPY = $(RISCV)/bin/$(PREFIX)objcopy
 CC = $(RISCV)/bin/$(PREFIX)$(COMPILER)
 CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs -static
 CFLAGS+=-mno-relax -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -DPLATFORM_ID=$(PLATFORM_ID)
@@ -58,11 +59,28 @@ else
 	# RUN+=-device loader,file=disk.img,addr=0x00100000,force-raw=on
 endif
 
+####################### SAMPLE PROGS VARS #################################
+
+# Variables
+# 1. MOVE VARIABLES TO THE TOP
+SAMPLE_PROGS_DIR := ./sample-programs
+SAMPLE_BUILD     := $(SAMPLE_PROGS_DIR)/build
+DISK_IMAGE       := $(SAMPLE_BUILD)/disk.elf
+DISK_RAW         := ./disk.img
+
+LD               := $(RISCV)/bin/$(PREFIX)gcc
+CC               := $(RISCV)/bin/$(PREFIX)gcc
+SAMPLE_CFLAGS    := -g -T $(SAMPLE_PROGS_DIR)/linker.ld -nostdlib -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -mno-relax
+
+PROGRAMS         := attacker victim
+
+####################################### END ######################################
+
 
 # QEMU (debug)
 GDB_PORT=1234
 
-all: setup uart syscon common kmalloc storage-driver loader scheduler traps syscalls handler sample-programs asm kmain ## build the kernel and all programs
+all: setup uart syscon common kmalloc storage-driver loader scheduler traps syscalls handler asm kmain ## build the kernel and all programs
 	$(CC) $(BUILD)/*.o $(RUNTIME) $(CFLAGS) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $(KERNEL_IMAGE)
 
 setup:
@@ -103,13 +121,39 @@ asm:
 	$(CC) -c src/asm/disk.S $(CFLAGS) -o $(BUILD)/disk.o
 	$(CC) -c src/asm/sim.S $(CFLAGS) -o $(BUILD)/sim.o
 
-sample-programs:
-	$(MAKE) all -C ./sample-programs XLEN=$(XLEN) MABI=$(MABI) COMPILER=$(COMPILER) PREFIX=$(PREFIX) RISCV=$(RISCV)
-
 kmain:
 	$(CC) -c src/kmain.c $(CFLAGS) -o $(BUILD)/kmain.o
 
-run: all ## run the kernel with programs
+run: all fast-build ## run the kernel with programs
+	$(RUN)
+
+$(SAMPLE_BUILD)/%.bin: $(SAMPLE_PROGS_DIR)/%.s
+	@mkdir -p $(SAMPLE_BUILD)
+	$(CC) $(SAMPLE_CFLAGS) -o $(SAMPLE_BUILD)/$*.elf $<
+	$(OBJCOPY) -O binary $(SAMPLE_BUILD)/$*.elf $@
+
+
+$(DISK_RAW): $(PROGRAMS:%=$(SAMPLE_BUILD)/%.bin)
+	@echo "Creating fixed-size disk image..."
+	@# 1. Create empty 9KB disk
+	@dd if=/dev/zero of=$@ bs=512 count=18 status=none
+	
+	@# 2. Loop through the binaries generated in SAMPLE_BUILD
+	@offset=0; \
+	for prog in $(PROGRAMS); do \
+		bin=$(SAMPLE_BUILD)/$$prog.bin; \
+		echo "Flashing $$bin to sector $$offset"; \
+		dd if=$$bin of=$@ bs=512 seek=$$offset conv=notrunc status=none; \
+		offset=$$(( $$offset + 8 + 2 )); \
+	done
+
+fast-build: $(KERNEL_IMAGE) $(DISK_RAW)
+	$(OBJCOPY) --set-section-flags .disk=alloc,code,contents --update-section .disk=$(DISK_RAW) $(KERNEL_IMAGE)
+
+fast-run: fast-build
+	$(RUN)
+
+fast-run-no-check:
 	$(RUN)
 
 debug: all
@@ -129,7 +173,7 @@ clean-sim:
 .PHONY: help sample-programs
 help: ## Show this help message
 	@echo "Ensure that the following variables are set: RISCV(e.g: /opt/riscv), PREFIX(e.g: riscv32-unknown-elf-), COMPILER(optional)(clang or gcc)"
-	@echo "Usage: make run [PROGRAMS=\"prog1 prog2\"] [XLEN=xlen]"
+	@echo "Usage: make run [PROGRAMS=\"prog1 prog2\"] [XLEN=xlen] !! use make all and make fast-run !!(make run is now broken)"
 	@echo "Usage: make [other-targets]"
 	@echo ""
 	@echo "Targets:"
@@ -137,3 +181,4 @@ help: ## Show this help message
 	@echo ""
 	@echo "Hint: To create new programs, add them to the sample-programs directory. Only supported ecalls are write and exit"
 	@echo "Hint: Call make clean before each different invocation of make run"
+	@echo "Hint: before running make fast-run, be sure to run make all"

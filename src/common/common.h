@@ -5,10 +5,13 @@
 
 #ifndef COMMON_H
 #define COMMON_H
+
+
+
+#ifndef __ASSEMBLER__
 #include <stdint.h>
 #include "../platform/platform.h"
 #include "../uart/uart.h"
-
 /**
  * @brief Converts a lowercase character to uppercase.
  * 
@@ -28,10 +31,6 @@ int toupper(int c);
  */
 void panic(const char *format, ...);
 
-/**
- * @brief main kernel logger
- */
-void klog(const char *format, ...);
 
 /**
  * @name PMP Configuration Flags
@@ -171,5 +170,17 @@ void set_pmp_cfg(uint8_t index, uint8_t cfg_byte);
     SET_PMP_ADDR(reg_top, _vals.pmpaddr1); \
     set_pmp_cfg(reg_top, (pmpcfg_val) | PMP_TOR); \
 } while (0)
+
+#endif
+
+/**
+ * @brief main kernel logger
+ */
+#if LOG_ENABLED
+    void klog_impl(const char *format, ...); 
+    #define klog(format, ...) klog_impl(format, ##__VA_ARGS__)
+#else
+    #define klog(format, ...) ((void)0) // Replace with nothing
+#endif
 
 #endif

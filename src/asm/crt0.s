@@ -24,15 +24,15 @@ _start:
   la sp, __stack_top
   add s0, sp, zero
 
-  # Zero out BSS
-  la t0, __bss_start    # Start address
-  la t1, __BSS_END__      # End address
+#   # Zero out BSS
+#   la t0, __bss_start    # Start address
+#   la t1, __BSS_END__      # End address
 
-bss_zero_loop:
-  beq t0, t1, bss_done # If start == end, we are finished
-  sw zero, 0(t0)       # Store XLEN-bit zero
-  addi t0, t0, 4       # Move to next word
-  j bss_zero_loop
+# bss_zero_loop:
+#   beq t0, t1, bss_done # If start == end, we are finished
+#   sw zero, 0(t0)       # Store XLEN-bit zero
+#   addi t0, t0, 4       # Move to next word
+#   j bss_zero_loop
 
 bss_done:
   jal zero, kmain

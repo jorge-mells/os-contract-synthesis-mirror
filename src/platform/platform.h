@@ -42,7 +42,7 @@
 /**
  * @brief Use this flag to turn on debug printing
  */
-#define LOG_ENABLED 1
+#define LOG_ENABLED 0
 
 #if __riscv_xlen == 64
   #define LREG ld

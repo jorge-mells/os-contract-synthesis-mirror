@@ -11,6 +11,7 @@
 #include "../uart/uart.h"
 #include "syscalls.h"
 #include "../process-mgmt/scheduler.h"
+#include "../common/common.h"
 
 /**
  * @brief Dispatcher for user requests (ecall).

@@ -15,14 +15,14 @@ void panic(const char *format, ...) {
   asm volatile ("wfi");
 }
 
-void klog(const char *format, ...) {
-  if (LOG_ENABLED) {
-    va_list arg;
-    va_start(arg, format);
-    kvprintf(format, arg);
-    va_end(arg);
-  }
-}
+#if LOG_ENABLED
+    void klog_impl(const char *format, ...) {
+        va_list arg;
+        va_start(arg, format);
+        kvprintf(format, arg);
+        va_end(arg);
+    }
+#endif
 
 
 pmpinfo_t pmp_compute_encoding(pmp_mode_t mode, uintptr_t start_addr, uintptr_t end_addr) {

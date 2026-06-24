@@ -1,8 +1,20 @@
 #include "traps.h"
+#include "../common/common.h"
 #include "../platform/platform.h"
 #include "../process-mgmt/scheduler.h"
 #include "../syscalls/handler.h"
 #include "../syscalls/syscalls.h"
+
+// NOTE: use klog instead of call klog, to save up on instructions
+#if LOG_ENABLED
+    .macro klog_call
+        call klog_impl
+    .endm
+#else
+    .macro klog_call
+        /* Do nothing */
+    .endm
+#endif
 
 // WARN: DON'T TOUCH THIS. SOME ONE WILL PROBABLY DO SO I WON'T SAY WHY. GOOD LUCK DEBUGGING.
 // JUST KIDDING: stupid compiler optimisations as usual. it'll end up using global pointer if you do,
@@ -35,6 +47,24 @@
 .align 8
 # NOTE: unimplemented interrupt/exception blocks just exit(poweroff) the kernel
 main_trap_handler:
+# fake 'slide' for cpus with only vectored mode
+  j trap_entry_common    # Offset 0: Exception / Reset
+  .align 2
+  j trap_entry_common    # Offset 4: Software Interrupt
+  .align 2
+  j trap_entry_common    # Offset 8: Reserved
+  .align 2
+  j trap_entry_common    # Offset 12: Machine Software Interrupt
+  .align 2
+  j trap_entry_common    # Offset 16: Reserved
+  .align 2
+  j trap_entry_common    # Offset 20: Supervisor Timer Interrupt
+  .align 2
+  j trap_entry_common    # Offset 24: Reserved
+  .align 2
+  j trap_entry_common    # Offset 28: Machine Timer Interrupt (The 2202 culprit)
+
+trap_entry_common:
   # prologue
   # unfortunately, since we can't tell what regs were being used before the trap(there's no interrupt/exception abi, all have
   # to be saved
@@ -113,7 +143,7 @@ main_trap_handler:
   srli s0, s0, 1
   and a1, a1, s0
   csrr a2, mepc
-  call klog
+  klog_call
 
   # klog messes up aX regs hence I reload
   csrr a1, mcause
@@ -147,7 +177,7 @@ main_trap_handler:
   li s0, -1 # better version of the above to support 32/64 bit systems
   srli s0, s0, 1
   and a1, a1, s0
-  call klog
+  klog_call
 
   # klog messes up aX regs
   csrr a1, mcause

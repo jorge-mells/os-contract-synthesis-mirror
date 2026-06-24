@@ -4,7 +4,7 @@
 #include "../traps/traps.h"
 
 void poweroff(void) {
-  kputs("Poweroff requested");
+  kputs("\nPoweroff requested");
   SYSCON_ADDR = POWER_OFF_MAGIC_NUM;
 }
 

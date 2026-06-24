@@ -1,4 +1,6 @@
-#!/bin/bash
+#! /usr/bin/env bash
+set -euo pipefail
+trap "echo 'error: Script failed: see failed command above'" ERR
 
 SIM_BIN="./simulators/Variane"
 ELF_FILE="build/kmain"
@@ -10,6 +12,7 @@ mkdir -p "$OUTPUT_DIR"
 # run sim
 TOHOST=$(riscv64-unknown-elf-nm "$ELF_FILE" | grep " tohost$" | cut -d ' ' -f 1)
 $SIM_BIN -f verilator.fst "$ELF_FILE" +tohost_addr="$TOHOST" > "$LOG_FILE" 2>&1
+cat "$LOG_FILE"
 
 # outputs
 rm -rf encaps.traces iti.traces
