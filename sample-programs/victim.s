@@ -1,30 +1,35 @@
-.section .text.boot
-.global _start
+.section .text
+.globl _start
 
 _start:
-    # PC-relative load of the message address
-    # Result: a1 = current_pc + offset_to_msg
-    la a1, msg          
-    
-    # syscall 64 (sys_write)
-    # a0 = 1 (stdout), a1 = buffer, a2 = length
-    li a0, 1
-    # We use a simple loop in the kernel for \0, so length in a2 
-    # can be 0 or ignored if your kernel doesn't use it.
-    la t0, msg
-    la a2, msg_end
-    sub a2, a2, t0    # a2 = address_of_end - address_of_start (length)
-    li a7, 64
-    ecall
+    # --- Training Phase ---
+    li t0, 1            # t0 = 1
+    li t1, 1            # t1 = 1
+    li t2, 500          # Loop counter
+train_loop:
+    beq t0, t1, target  # Predicts taken
+    addi t2, t2, -1
+    bnez t2, train_loop
 
-    # syscall 93 (sys_exit)
-    li a0, 0            # status 0
-    li a7, 93
-    div t0, a2, a7 
-    ecall
-
-.section .rodata
-msg:
-    .asciz "Hello 2\n"
-msg_end:
+    # --- Victim Phase ---
+    li t0, 1
+    li t1, 0            # Condition will fail (1 != 0)
     
+    # This will be mispredicted as "Taken"
+    beq t0, t1, target  
+
+    # --- Correct Path (Fall-Through) ---
+    addi t3, t3, 1      # This is the path we want
+    j exit
+
+target:
+    # --- Wrong Path (Speculative) ---
+    addi t4, t4, 1
+    mul  t5, t4, t6
+    lw   s0, -4(sp)      # Potential memory access
+    j exit              # Return to flow
+
+exit:
+    li a7, 93           # syscall: exit
+    li a0, 0            # status: 0
+    ecall

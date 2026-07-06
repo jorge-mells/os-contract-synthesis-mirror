@@ -1,0 +1,11 @@
+prefix=/home/jorgemells/Development/thesis/cva6/tools/spike
+exec_prefix=/home/jorgemells/Development/thesis/cva6/tools/spike
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: riscv-disasm
+Description: RISC-V disassembler
+Version: git
+Libs: -Wl,-rpath,${libdir} -L${libdir} -ldisasm
+Cflags: -I${includedir} 
+URL: http://riscv.org/download.html#tab_disasm

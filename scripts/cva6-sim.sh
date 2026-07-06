@@ -10,7 +10,7 @@ LOG_FILE="$OUTPUT_DIR/simulation.log"
 mkdir -p "$OUTPUT_DIR"
 
 # run sim
-TOHOST=$(riscv64-unknown-elf-nm "$ELF_FILE" | grep " tohost$" | cut -d ' ' -f 1)
+TOHOST=$("$RISCV"/bin/riscv64-unknown-elf-nm "$ELF_FILE" | grep " tohost$" | cut -d ' ' -f 1)
 $SIM_BIN -f verilator.fst "$ELF_FILE" +tohost_addr="$TOHOST" > "$LOG_FILE" 2>&1
 cat "$LOG_FILE"
 

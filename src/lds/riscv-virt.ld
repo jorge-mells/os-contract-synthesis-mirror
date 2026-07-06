@@ -213,6 +213,9 @@ SECTIONS
 		            MAX(__DATA_BEGIN__ + 0x800, __BSS_END__ - 0x800));
   _end = .; PROVIDE (end = .);
   . = DATA_SEGMENT_END (.);
+  /* custom data */
+  _current_pid = ALIGN(8);
+  . = . + 4;
   /* HEAP */
   STACK_START = ORIGIN(RAM) + STACK_OFFSET;
   GUARD_HOLE = 0x1000;
