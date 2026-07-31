@@ -4,14 +4,17 @@ XLEN?=64
 LD_ADDR = 0x80000000
 # Map names to numbers
 ifeq ($(PLATFORM),IBEX)
-    PLATFORM_ID = 1
+  PLATFORM_ID = 1
 	XLEN=32
 	LD_ADDR = 0x00000000
+	INTERVAL?=10000
 else ifeq ($(PLATFORM),CVA6)
-    PLATFORM_ID = 2
+  PLATFORM_ID = 2
 	XLEN=64
+	INTERVAL?=100000
 else
-    PLATFORM_ID = 3
+  PLATFORM_ID = 3
+	INTERVAL?=10000
 endif
 
 # Directories
@@ -34,17 +37,18 @@ RISCV?=/usr
 OBJCOPY = $(RISCV)/bin/$(PREFIX)objcopy
 CC = $(RISCV)/bin/$(PREFIX)$(COMPILER)
 CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs -static
-CFLAGS+=-mno-relax -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -DPLATFORM_ID=$(PLATFORM_ID)
+CFLAGS+=-mno-relax -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -DPLATFORM_ID=$(PLATFORM_ID) -DINTERVAL=$(INTERVAL)
 # note that you might have to specify endianness in certain cpu's. note this for debugging purposes
 LDFLAGS=-g -Wl,-N,--gc-sections,--oformat,$(TARGET_FORMAT),--defsym=BASE_ADDR=$(LD_ADDR)
 RUNTIME=src/asm/crt0.s
 LINKER_SCRIPT=src/lds/riscv-virt.ld
 KERNEL_IMAGE=$(BUILD)/kmain
 
+OUTPUT_DIR?=/simulators/output
 ifeq ($(PLATFORM), CVA6)
-	RUN=./scripts/cva6-sim.sh
+	RUN=./scripts/cva6-sim.sh $(OUTPUT_DIR)
 else ifeq ($(PLATFORM), IBEX)
-	RUN=./scripts/ibex-sim.sh
+	RUN=./scripts/ibex-sim.sh $(OUTPUT_DIR)
 else
 	# QEMU
 	QEMU=qemu-system-riscv$(XLEN)
@@ -63,16 +67,15 @@ endif
 
 # Variables
 # 1. MOVE VARIABLES TO THE TOP
-SAMPLE_PROGS_DIR := ./sample-programs
+SAMPLE_PROGS_DIR ?= ./sample-programs
 SAMPLE_BUILD     := $(SAMPLE_PROGS_DIR)/build
-DISK_IMAGE       := $(SAMPLE_BUILD)/disk.elf
-DISK_RAW         := ./disk.img
+DISK_RAW         ?= ./disk.img
 
 LD               := $(RISCV)/bin/$(PREFIX)gcc
 CC               := $(RISCV)/bin/$(PREFIX)gcc
 SAMPLE_CFLAGS    := -g -T $(SAMPLE_PROGS_DIR)/linker.ld -nostdlib -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -mno-relax
 
-PROGRAMS         := attacker victim
+PROGRAMS         ?= victim branch-secret-leak-attacker
 
 ####################################### END ######################################
 
@@ -150,11 +153,11 @@ $(DISK_RAW): $(PROGRAMS:%=$(SAMPLE_BUILD)/%.bin)
 fast-build: $(KERNEL_IMAGE) $(DISK_RAW)
 	$(OBJCOPY) --set-section-flags .disk=alloc,code,contents --update-section .disk=$(DISK_RAW) $(KERNEL_IMAGE)
 
-fast-run: fast-build
-	$(RUN)
-
-fast-run-no-check:
-	$(RUN)
+# fast-run: fast-build
+# 	$(RUN)
+#
+# fast-run-no-check:
+# 	$(RUN)
 
 debug: all
 	$(RUN) -gdb tcp::$(GDB_PORT) -S
@@ -165,10 +168,23 @@ clean: ## remove the build directory
 	rm -vf qemu.log
 	rm -vf $(BUILD)/*.o
 	rm -vf $(KERNEL_IMAGE)
-	rm -rvf simulators/outputs
+	rm -rvf $(OUTPUT_DIR)
+
+clean-test: ## remove the build directory
+	$(MAKE) clean -C ./$(SAMPLE_PROGS_DIR)
+	rm -vf $(DISK_RAW)
+	rm -vf $(KERNEL_IMAGE)
+	rm -rvf $(OUTPUT_DIR)
+
 
 clean-sim:
-	rm -rvf simulators/output/$(PLATFORM)
+	rm -rvf $(OUTPUT_DIR)/$(PLATFORM)
+
+# clean-tests: # don't forget to pass id!!
+# 	# FIX: this is not robust!
+# 	rm -rvf test-programs1_$(id) test-programs2_$(id)
+# 	rm -vf disk1_$(id).img disk2_$(id).img
+# 	rm -vf build/kmain1_$(id) build/kmain2_$(id)
 
 .PHONY: help sample-programs
 help: ## Show this help message

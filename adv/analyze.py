@@ -287,8 +287,10 @@ def main():
     )
     if comparator.compare_sequences(intervals1, intervals2):
         print("attacker indistinguishable")
+        sys.exit(1)
     else:
         print("attacker distinguishable")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

@@ -28,7 +28,6 @@
  */
 #define CLINT_MTIME 0x0200bff8 // qemu & cva6
 
-#define INTERVAL 1000000
 
 /**
  * @brief System Controller (syscon) address.

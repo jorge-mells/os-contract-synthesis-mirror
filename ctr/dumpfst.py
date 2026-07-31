@@ -4,6 +4,7 @@
 #
 
 import sys
+
 import pylibfst
 
 
@@ -180,11 +181,11 @@ if fst == pylibfst.ffi.NULL:
     sys.exit(1)
 
 
-(scopes, signals) = pylibfst.get_scopes_signals2(fst)
+scopes, signals = pylibfst.get_scopes_signals2(fst)
 # print("Scopes:  " + str(scopes))
 for name in sorted(signals.by_name.keys()):
-    if "u_ibex_core" in name:
-        print(name)
+    print(name)
 
 pylibfst.lib.fstReaderClose(fst)
 print("done")
+

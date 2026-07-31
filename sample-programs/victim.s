@@ -13,7 +13,7 @@ train_loop:
 
     # --- Victim Phase ---
     li t0, 1
-    li t1, 0            # Condition will fail (1 != 0)
+    li t1, 1            # Condition will fail (1 != 0)
     
     # This will be mispredicted as "Taken"
     beq t0, t1, target  

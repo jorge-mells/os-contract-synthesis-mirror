@@ -10,3 +10,7 @@ qemu.log
 simulators/outputs
 compile_commands.json
 .venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
