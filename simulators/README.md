@@ -2,7 +2,7 @@
 
 ## Ibex
 
-clone the ibex repo and follow the steps to in ibex simple system to generate a verilator binary. However replace ibex_simple_system.h and rtl/ibex_simple_system.sv with the versions in sourcefiles/ibex. The binary will be in repo/build
+clone the ibex repo and follow the steps to in ibex simple system to generate a verilator binary. However replace ibex_simple_system.h and rtl/ibex_simple_system.sv with the versions in sourcefiles/ibex. The binary will be in repo/build. Ensure PMPEnable=1
 
 ## cva6
 

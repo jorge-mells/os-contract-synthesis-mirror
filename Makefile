@@ -1,7 +1,10 @@
 # cpu/riscv emulator being targeted
 PLATFORM ?= QEMU
 XLEN?=64
+# ensure it still runs as 32 bits but with with cva6's memory layout using set_xlen
+SET_XLEN?=0
 LD_ADDR = 0x80000000
+PRG_COUNT?=2
 # Map names to numbers
 ifeq ($(PLATFORM),IBEX)
   PLATFORM_ID = 1
@@ -10,7 +13,9 @@ ifeq ($(PLATFORM),IBEX)
 	INTERVAL?=10000
 else ifeq ($(PLATFORM),CVA6)
   PLATFORM_ID = 2
-	XLEN=64
+  ifeq ($(SET_XLEN),1)
+  	XLEN = 32
+	endif
 	INTERVAL?=100000
 else
   PLATFORM_ID = 3
@@ -37,14 +42,14 @@ RISCV?=/usr
 OBJCOPY = $(RISCV)/bin/$(PREFIX)objcopy
 CC = $(RISCV)/bin/$(PREFIX)$(COMPILER)
 CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs -static
-CFLAGS+=-mno-relax -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -DPLATFORM_ID=$(PLATFORM_ID) -DINTERVAL=$(INTERVAL)
+CFLAGS+=-mno-relax -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -DPLATFORM_ID=$(PLATFORM_ID) -DINTERVAL=$(INTERVAL) -DPRG_COUNT=$(PRG_COUNT)
 # note that you might have to specify endianness in certain cpu's. note this for debugging purposes
 LDFLAGS=-g -Wl,-N,--gc-sections,--oformat,$(TARGET_FORMAT),--defsym=BASE_ADDR=$(LD_ADDR)
 RUNTIME=src/asm/crt0.s
 LINKER_SCRIPT=src/lds/riscv-virt.ld
-KERNEL_IMAGE=$(BUILD)/kmain
+KERNEL_IMAGE?=$(BUILD)/kmain
 
-OUTPUT_DIR?=/simulators/output
+OUTPUT_DIR?=simulators/output
 ifeq ($(PLATFORM), CVA6)
 	RUN=./scripts/cva6-sim.sh $(OUTPUT_DIR)
 else ifeq ($(PLATFORM), IBEX)
@@ -75,7 +80,7 @@ LD               := $(RISCV)/bin/$(PREFIX)gcc
 CC               := $(RISCV)/bin/$(PREFIX)gcc
 SAMPLE_CFLAGS    := -g -T $(SAMPLE_PROGS_DIR)/linker.ld -nostdlib -mcmodel=medany -march=rv$(XLEN)imafd -mabi=$(MABI) -mno-relax
 
-PROGRAMS         ?= victim branch-secret-leak-attacker
+PROGRAMS         ?= instr-type-leak-victim branch-secret-leak-attacker
 
 ####################################### END ######################################
 
@@ -152,6 +157,7 @@ $(DISK_RAW): $(PROGRAMS:%=$(SAMPLE_BUILD)/%.bin)
 
 fast-build: $(KERNEL_IMAGE) $(DISK_RAW)
 	$(OBJCOPY) --set-section-flags .disk=alloc,code,contents --update-section .disk=$(DISK_RAW) $(KERNEL_IMAGE)
+	$(OBJCOPY) -O binary $(KERNEL_IMAGE) $(KERNEL_IMAGE).bin
 
 # fast-run: fast-build
 # 	$(RUN)
@@ -168,6 +174,7 @@ clean: ## remove the build directory
 	rm -vf qemu.log
 	rm -vf $(BUILD)/*.o
 	rm -vf $(KERNEL_IMAGE)
+	rm -vf $(KERNEL_IMAGE).bin
 	rm -rvf $(OUTPUT_DIR)
 
 clean-test: ## remove the build directory

@@ -8,7 +8,7 @@ _start:
     li x4, 0          # Result accumulator
 
 loop:
-    mul x4, x2, x3    # Perform multiplication: x4 = x2 * x3
+    add x4, x2, x3    # Perform multiplication: x4 = x2 * x3
     addi x1, x1, -1   # Decrement counter
     bnez x1, loop     # If counter != 0, jump back to loop
 

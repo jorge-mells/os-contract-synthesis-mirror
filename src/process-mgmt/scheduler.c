@@ -8,6 +8,7 @@ uintptr_t kernel_sp, kernel_gp;
 pcb_t pcb_table[MAX_PROCS];
 pcb_t *current_running_pcb;
 extern uint32_t _current_pid;
+uint8_t sched_global_total_progs_on_disk;
 
 /**
  * @brief Global counter for assigning unique process identifiers and tracking
@@ -100,8 +101,8 @@ void load_programs_impl(uint64_t start_addr, uint64_t space_allocated,
 }
 
 void load_programs(uint64_t start_addr, uint64_t space_allocated,
-                   uint8_t num_requested) {
-  uint64_t total_progs_on_disk = total_prog_count;
+                   uint8_t num_requested, uint8_t total_progs_on_disk) {
+  sched_global_total_progs_on_disk = total_progs_on_disk;
 
   // 1. Check if we've already finished the disk
   // If next_prog_id was 5 and we have 5 progs, we're done.
@@ -114,7 +115,7 @@ void load_programs(uint64_t start_addr, uint64_t space_allocated,
     next_prog_id = 0;
   }
 
-  for (int pcb_idx = 0; pcb_idx < 2; pcb_idx++) {
+  for (int pcb_idx = 0; pcb_idx < total_progs_on_disk; pcb_idx++) {
 
     // Calculate the base address based on the index
     uint64_t block_base = start_addr + (pcb_idx * BLOCK_SIZE);
@@ -218,7 +219,8 @@ void scheduler() {
   // 1. If the current slot just became UNUSED (process exited),
   // try to load a new program from disk into that same memory hole.
   if (current_running_pcb->state == PCB_STATE_UNUSED) {
-    load_programs(current_running_pcb->base_addr, BLOCK_SIZE, 1);
+    load_programs(current_running_pcb->base_addr, BLOCK_SIZE, 1,
+                  sched_global_total_progs_on_disk);
   }
   // set state of current pcb to ready
   if (current_running_pcb->state == PCB_STATE_RUNNING) {

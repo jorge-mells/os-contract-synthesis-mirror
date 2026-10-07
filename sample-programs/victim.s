@@ -3,7 +3,7 @@
 
 _start:
     # --- Training Phase ---
-    li t0, 1            # t0 = 1
+    li t0, 0            # t0 = 1
     li t1, 1            # t1 = 1
     li t2, 500          # Loop counter
 train_loop:

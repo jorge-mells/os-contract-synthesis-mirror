@@ -6,7 +6,7 @@ _start:
     addi t0, t0, 0x100
     
     # Counter: Run for 20,000 accesses, then exit
-    li t2, 1 
+    li t2, 10000
 loop:
     lw zero, 0(t0)
     addi t2, t2, -1

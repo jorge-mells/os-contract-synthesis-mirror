@@ -1,5 +1,5 @@
 *.o
-kmain
+kmain*
 .vscode
 *.img
 *.bin
@@ -14,3 +14,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.log
+
+assets/
+build/
