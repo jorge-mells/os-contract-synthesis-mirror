@@ -2,6 +2,7 @@
 
 # Define your functions (they can accept parameters using $1, $2, etc.)
 compile() {
+  echo 'hello' && exit 1
   local base_path="$1"
 
   cd "$base_path" || exit 1
