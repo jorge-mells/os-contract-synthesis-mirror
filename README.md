@@ -1,47 +1,27 @@
-# Hardware-Software Leakage Contract Synthesis Toolchain
+# OS Contract Synthesis
 
-[![arXiv](https://img.shields.io/badge/arXiv-2401.09383-b31b1b.svg?style=for-the-badge)](https://arxiv.org/abs/2401.09383)
-[![Zenodo](https://img.shields.io/badge/Zenodo-10.5281/zenodo.10491534-blue.svg?style=for-the-badge)](https://doi.org/10.5281/zenodo.10491534)
-[![YouTube](https://img.shields.io/badge/YouTube-ff0000.svg?style=for-the-badge&logo=youtube)](https://youtu.be/12GmWUNCiIs)
+## Usage
+- Clone the repo and run `docker build -t contract-generator .`
+- Then run `docker run -it contract-generator` to generate contracts.
+- If you don't want to use docker, see the docker file and use the instructions in there to prepare the environment and run the java main class(ContractGen.java).
 
-## Background
+## How it works
+- The os is compiled without any user programs at the beginning. Two compiled versions of the os exist. One for cpu simulation and the other for spike simulation. The version for spike simulation ensures that only one user program can be run on the cpu while the version for cpu allows for two. These compiled oses are used for simulation throughout the program.
+- The test cases are generated randomly using the methodology specified in the original paper. A test case is however defined as two programs. One representing an attacker process and the other a victim process(it hasn't fully been decided what an attacker should look like(see src/main/resources/os/program-templates/ for more details). We also considers syscall-level observations. A syscall-level observation may leak the syscall type or one of the syscall argument(based on the linux riscv abi) and considers the entire syscall. For now syscalls are generated in blocks where all the arguments are specified before each syscall is executed(see src/main/java/contractgen/riscv/isa/tests/RISCVTestGenerator.java for more details. In particular check the alterObservations method)
+- For each simulation, each of the two test cases are first compiled into the os and executed on a verilator simulator of some target cpu(in this case ibex). The simulator executes each os-testcase binary in parallel on a cpu emulator and when the cpu reaches the attacker process, compares the architectural state of the cpu for both test cases(see src/main/resources/os/simulators/sourcefiles/ibex/ibexos_simple_system_main.cc). The list of signals which are checked during each cycle is contained in rvfi_signals.hpp. In particular note rvfi_ext_mcycle.
+- After determining attacker distinguishability, the next step is to extract contract observations. This is done via spike. We use the spike compiled os and then attach only the victim process to it for each test case. Then we run spike on each of these os-testcase binaries and for each instruction, we extract any observational differences(see RVFIOSExtractor.java for more details. this file closely follows RVFIExtractor.java adapting it as required)
+- Finally the rest of the program runs as detailed in the original paper and the ilp solver eventually generates contracts based on attacker distinguishability and the extracted contract observations.
 
-Leakage contracts have been presented
-in [Hardware-Software Contracts for Secure Speculation](https://doi.org/10.1109/SP40001.2021.00036) and allow to capture
-microarchitectural leakages through side channels at the ISA-level. While ideally a processor is designed with a
-specific contract in mind, correct leakage contracts rarely exist for existing microarchitectures.
+## Roadmap
+- Determine shape of attacker process to generate better contracts and think about test case generation generally. 
+- Currently, it appears the generated contracts do not contain syscall observations. Fix that.
+- Add more syscalls
+- Repeat simulation process for another cpu(cva6)
+- Fix bugs as they pop up
+- Remove a few hardcoded constants(such as those in ibexos_simple_system_main.cc)
 
-This toolchain allows to generate a leakage contract candidate based on a set of testcases. These test cases are
-automatically generated and try to surface common leakages.
-
-Every testcase is composed of two programs which are evaluated in parallel. The simulation shows whether the two
-programs are distinguishable by an adversary and using the simulation trace and
-the [RISC-V Formal Interface](https://github.com/SymbioticEDA/riscv-formal/blob/master/docs/rvfi.md), possible additions
-to the contract, i.e. a set of contract atoms, can be extracted.
-
-Eventually, these results are used to synthesize a contract using [Google OR-Tools](https://github.com/google/or-tools).
-
-## Getting started
-
-To get started, have a look at the main method of the `ContractGen` class.
-
-To start contract generation, use the provided `docker-compose.yml` in the `resources` directory.
-
-The results mentioned in the paper can be found on [Zenodo](https://doi.org/10.5281/zenodo.10491534).
-
-## Adding support for new microarchitectures
-
-Support for a new microarchitecture requires only a few steps:
-
-- Embed two instances of the core in a testbench and ensure that the insturctions can be loaded into memory. Take a look
-  at the Ibex core integration for an up-to-date example.
-- Implement the adversary model and provide its observations as signals to the adversary module.
-- Provide a way to extract the architectural state e.g.
-  the [RISC-V Formal Interface](https://github.com/SymbioticEDA/riscv-formal/blob/master/docs/rvfi.md).
-- Implement the microarchitecture as a new class in Java and provide the required functionality to compile the
-  testbench, simulate a testcase and extract possible observations from a trace.
-
-## Paper
-
-This project was used in the paper "Synthesizing Hardware-Software Leakage Contracts for RISC-V Open-Source Processors"
-by Gideon Mohr, Marco Guarnieri and Jan Reineke presented at DATE 2024.
+## OS Features
+- Runs on both rv32 and rv64 cores
+- Can execute small riscv programs and make simple syscalls. Currently supported syscalls are write, exit and yield
+- Uses a round robin scheduler to schedule programs for given time slices.
+- Protects processes from each other using pmp.
