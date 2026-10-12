@@ -19,7 +19,7 @@ import contractgen.util.Pair;
 
 public class IBEXOS extends MARCH {
 
-  private static final String BASE_PATH = "/home/jorgemells/Development/thesis/thesis-cp/src/main/resources/os/";
+  private static final String BASE_PATH = System.getProperty("user.dir") + "/src/main/resources/os/";
 
   public IBEXOS(Updater updater, TestCases testCases) {
     super(new RISCV(updater, testCases), new RVFIOSExtractor());

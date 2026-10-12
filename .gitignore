@@ -52,6 +52,7 @@ results-old/*
 # os
 *.o
 kmain*
+!kmain.c
 .vscode
 *.img
 *.bin
