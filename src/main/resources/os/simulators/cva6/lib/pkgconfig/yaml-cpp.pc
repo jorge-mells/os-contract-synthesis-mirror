@@ -1,0 +1,11 @@
+prefix=/home/jorgemells/Development/thesis/cva6/tools/spike
+exec_prefix=${prefix}
+includedir=/home/jorgemells/Development/thesis/cva6/tools/spike/include
+libdir=/home/jorgemells/Development/thesis/cva6/tools/spike/lib
+
+Name: Yaml-cpp
+Description: A YAML parser and emitter for C++
+Version: 0.8.0
+Requires:
+Libs: -L${libdir} -lyaml-cpp
+Cflags: -I${includedir}

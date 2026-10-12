@@ -1,0 +1,16 @@
+# Target setup
+target remote localhost:1234
+set arch riscv:rv32
+
+# Breakpoints
+break *0x80200000
+
+# UI Setup
+layout split
+focus cmd
+
+# Start execution
+continue
+
+# load user_prog
+add-symbol-file sample-programs/build/prog1.elf 0x80200000

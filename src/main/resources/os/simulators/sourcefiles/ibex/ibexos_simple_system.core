@@ -1,0 +1,191 @@
+CAPI=2:
+# Copyright lowRISC contributors.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+name: "lowrisc:ibex:ibexos_simple_system"
+description: "Dual independent system setup for running two binaries on separate Ibex instances using Verilator"
+filesets:
+  files_sim:
+    depend:
+      - lowrisc:ibex:ibex_top_tracing
+      - lowrisc:ibex:sim_shared
+    files:
+      - rtl/ibex_simple_system.sv
+    file_type: systemVerilogSource
+
+  files_verilator:
+    files:
+      - ibexos_simple_system_main.cc: { file_type: cppSource }
+      - ibexos_simple_system_.h:  { file_type: cppSource, is_include_file: true}
+      - rvfi_signals.hpp: { file_type: cppSource , is_include_file: true}
+      - lint/verilator_waiver.vlt: {file_type: vlt}
+
+  files_lint_verible:
+    files:
+      - lint/verible_waiver.vbw: {file_type: veribleLintWaiver}
+
+parameters:
+  RV32E:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enable the E ISA extension (reduced register set) [0/1]"
+
+  RV32M:
+    datatype: str
+    default: ibex_pkg::RV32MFast
+    paramtype: vlogdefine
+    description: "RV32M implementation parameter enum."
+
+  RV32B:
+    datatype: str
+    default: ibex_pkg::RV32BNone
+    paramtype: vlogdefine
+    description: "Bitmanip implementation parameter enum."
+
+  RV32ZC:
+    datatype: str
+    default: ibex_pkg::RV32ZcaZcbZcmp
+    paramtype: vlogdefine
+    description: "Compressed instructions parameter enum."
+
+  RegFile:
+    datatype: str
+    default: ibex_pkg::RegFileFF
+    paramtype: vlogdefine
+    description: "Register file implementation parameter enum."
+
+  INSTR_CYCLE_DELAY:
+    datatype: int
+    default: 0
+    paramtype: vlogdefine
+    description: "Number of cycles to delay instruction RAM access."
+
+  ICache:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enable instruction cache"
+
+  ICacheECC:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enable ECC protection in instruction cache"
+
+  SRAMInitFile:
+    datatype: str
+    paramtype: vlogparam
+    description: "Path to a vmem file to initialize the RAM with"
+
+  BranchTargetALU:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enables separate branch target ALU"
+
+  WritebackStage:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enables third pipeline stage"
+
+  SecureIbex:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enables security hardening features"
+
+  ICacheScramble:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enables ICache scrambling feature"
+
+  BranchPredictor:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enables static branch prediction"
+
+  DbgTriggerEn:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enable support for debug triggers"
+
+  PMPEnable:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Enable PMP"
+
+  PMPGranularity:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Granularity of NAPOT range"
+
+  PMPNumRegions:
+    datatype: int
+    paramtype: vlogparam
+    default: 4
+    description: "Number of PMP regions"
+
+  MHPMCounterNum:
+    datatype: int
+    paramtype: vlogparam
+    default: 0
+    description: "Number of performance monitor event counters"
+
+  MHPMCounterWidth:
+    datatype: int
+    paramtype: vlogparam
+    default: 40
+    description: "Bit width of performance monitor event counters"
+
+targets:
+  default: &default_target
+    filesets:
+      - tool_veriblelint ? (files_lint_verible)
+      - files_sim
+      - tool_verilator ? (files_verilator)
+    toplevel: ibex_simple_system
+    parameters:
+      - RV32E
+      - RV32M
+      - RV32B
+      - RV32ZC
+      - RegFile
+      - INSTR_CYCLE_DELAY
+      - ICache
+      - ICacheScramble
+      - ICacheECC
+      - BranchTargetALU
+      - WritebackStage
+      - SecureIbex
+      - BranchPredictor
+      - DbgTriggerEn
+      - PMPEnable
+      - PMPGranularity
+      - PMPNumRegions
+      - MHPMCounterNum
+      - MHPMCounterWidth
+      - SRAMInitFile
+
+  sim:
+    <<: *default_target
+    default_tool: verilator
+    tools:
+      verilator:
+        mode: cc
+        verilator_options:
+          - '--trace'
+          - '--trace-fst'
+          - '--trace-structs'
+          - '--trace-params'
+          - '--trace-max-array 1024'
+          - '-CFLAGS "-std=c++20 -Wall -DVM_TRACE_FMT_FST -DTOPLEVEL_NAME=ibex_simple_system -g"'
+          - '-LDFLAGS "-pthread -lutil -lelf"'
+          - "-Wall"
+          - "--unroll-count 72"
