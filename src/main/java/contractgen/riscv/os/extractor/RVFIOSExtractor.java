@@ -18,15 +18,6 @@ import contractgen.riscv.isa.contract.RISCV_OBSERVATION_TYPE;
 import contractgen.util.Pair;
 
 public class RVFIOSExtractor implements Extractor {
-  private List<TraceElement> traces1;
-  private List<TraceElement> traces2;
-
-  // Timeline Lookups for O(1) access
-  private RegisterTimeline timeline1;
-  private RegisterTimeline timeline2;
-
-  private Set<RISCVObservation> obs1;
-  private Set<RISCVObservation> obs2;
 
   @Override
   /**
@@ -56,9 +47,11 @@ public class RVFIOSExtractor implements Extractor {
 
   private Pair<TestResult, TestResult> extractResults(String SIM1PATH, String SIM2PATH,
       boolean adversaryDistinguishable, int index, String type) {
+    List<TraceElement> traces1, traces2;
+
     try {
-      this.traces1 = new TraceParser(SIM1PATH.trim(), 0).parseUserSections();
-      this.traces2 = new TraceParser(SIM2PATH.trim(), 0).parseUserSections();
+      traces1 = new TraceParser(SIM1PATH.trim(), 0).parseUserSections();
+      traces2 = new TraceParser(SIM2PATH.trim(), 0).parseUserSections();
       // if (type.equals("isa")) {
       // // System.out.println("[" + Thread.currentThread().getName() + "] " + " (" +
       // // SIM1PATH + ") " + traces1);
@@ -76,20 +69,20 @@ public class RVFIOSExtractor implements Extractor {
       throw new RuntimeException(e);
     }
 
-    this.timeline1 = new RegisterTimeline(this.traces1);
-    this.timeline2 = new RegisterTimeline(this.traces2);
-    this.obs1 = new HashSet<>();
-    this.obs2 = new HashSet<>();
+    var timeline1 = new RegisterTimeline(traces1);
+    var timeline2 = new RegisterTimeline(traces2);
+    Set<RISCVObservation> obs1 = new HashSet<>();
+    Set<RISCVObservation> obs2 = new HashSet<>();
     // WARN: both lists might be different lengths
-    for (int i = 0; i < Math.min(this.traces1.size(), this.traces2.size()); i++) {
-      compareInstructions(i);
-      compareRegisters(i);
-      compareMemory(i);
-      compareBranch(i);
+    for (int i = 0; i < Math.min(traces1.size(), traces2.size()); i++) {
+      compareInstructions(i, traces1, traces2, obs1, obs2);
+      compareRegisters(i, traces1, traces2, timeline1, timeline2, obs1, obs2);
+      compareMemory(i, traces1, traces2, obs1, obs2);
+      compareBranch(i, traces1, traces2, timeline1, timeline2, obs1, obs2);
       for (int distance = 1; distance <= 4; distance++) {
-        compareDependencies(i, distance);
+        compareDependencies(i, distance, traces1, traces2, obs1, obs2);
       }
-      compareSections(i);
+      compareSections(i, traces1, traces2, obs1, obs2);
 
     }
     return new Pair<>(new RISCVTestResult(obs1, adversaryDistinguishable, index * 2),
@@ -98,9 +91,10 @@ public class RVFIOSExtractor implements Extractor {
 
   // WARN: in the reference implementation, there's a check for invalid
   // instructions. check later!!
-  private void compareInstructions(int idx) {
-    TraceElement t1 = this.traces1.get(idx);
-    TraceElement t2 = this.traces2.get(idx);
+  private void compareInstructions(int idx, List<TraceElement> traces1, List<TraceElement> traces2,
+      Set<RISCVObservation> obs1, Set<RISCVObservation> obs2) {
+    TraceElement t1 = traces1.get(idx);
+    TraceElement t2 = traces2.get(idx);
 
     RISCVInstruction i1 = t1.instruction();
     RISCVInstruction i2 = t2.instruction();
@@ -133,10 +127,11 @@ public class RVFIOSExtractor implements Extractor {
   }
 
   private void compareRegisters(
-      int idx) {
+      int idx, List<TraceElement> traces1, List<TraceElement> traces2, RegisterTimeline timeline1,
+      RegisterTimeline timeline2, Set<RISCVObservation> obs1, Set<RISCVObservation> obs2) {
     // Extract instructions for cleaner syntax
-    TraceElement t1 = this.traces1.get(idx);
-    TraceElement t2 = this.traces2.get(idx);
+    TraceElement t1 = traces1.get(idx);
+    TraceElement t2 = traces2.get(idx);
     RISCVInstruction i1 = t1.instruction();
     RISCVInstruction i2 = t2.instruction();
 
@@ -147,8 +142,8 @@ public class RVFIOSExtractor implements Extractor {
 
     // RS1 Comparison
     if (i1.hasRS1() && i2.hasRS1()) {
-      long t1_rs1_val = this.timeline1.get(t1.time(), i1.rs1());
-      long t2_rs1_val = this.timeline2.get(t2.time(), i2.rs1());
+      long t1_rs1_val = timeline1.get(t1.time(), i1.rs1());
+      long t2_rs1_val = timeline2.get(t2.time(), i2.rs1());
 
       if (!Objects.equals(t1_rs1_val, t2_rs1_val)) {
         obs1.add(new RISCVObservation(i1.type(), RISCV_OBSERVATION_TYPE.REG_RS1));
@@ -158,8 +153,8 @@ public class RVFIOSExtractor implements Extractor {
 
     // RS2 Comparison
     if (i1.hasRS2() && i2.hasRS2()) {
-      long t1_rs2_val = this.timeline1.get(t1.time(), i1.rs2());
-      long t2_rs2_val = this.timeline2.get(t2.time(), i2.rs2());
+      long t1_rs2_val = timeline1.get(t1.time(), i1.rs2());
+      long t2_rs2_val = timeline2.get(t2.time(), i2.rs2());
 
       if (!Objects.equals(t1_rs2_val, t2_rs2_val)) {
         obs1.add(new RISCVObservation(i1.type(), RISCV_OBSERVATION_TYPE.REG_RS2));
@@ -169,8 +164,8 @@ public class RVFIOSExtractor implements Extractor {
 
     // RD Comparison
     if (i1.hasRD() && i2.hasRD()) {
-      long t1_rd_val = this.timeline1.get(t1.time(), i1.rd());
-      long t2_rd_val = this.timeline2.get(t2.time(), i2.rd());
+      long t1_rd_val = timeline1.get(t1.time(), i1.rd());
+      long t2_rd_val = timeline2.get(t2.time(), i2.rd());
 
       if (!Objects.equals(t1_rd_val, t2_rd_val)) {
         obs1.add(new RISCVObservation(i1.type(), RISCV_OBSERVATION_TYPE.REG_RD));
@@ -179,9 +174,10 @@ public class RVFIOSExtractor implements Extractor {
     }
   }
 
-  private void compareMemory(int idx) {
-    TraceElement t1 = this.traces1.get(idx);
-    TraceElement t2 = this.traces2.get(idx);
+  private void compareMemory(int idx, List<TraceElement> traces1, List<TraceElement> traces2,
+      Set<RISCVObservation> obs1, Set<RISCVObservation> obs2) {
+    TraceElement t1 = traces1.get(idx);
+    TraceElement t2 = traces2.get(idx);
     RISCVInstruction i1 = t1.instruction();
     RISCVInstruction i2 = t2.instruction();
 
@@ -255,9 +251,10 @@ public class RVFIOSExtractor implements Extractor {
     };
   }
 
-  private void compareBranch(int idx) {
-    TraceElement t1 = this.traces1.get(idx);
-    TraceElement t2 = this.traces2.get(idx);
+  private void compareBranch(int idx, List<TraceElement> traces1, List<TraceElement> traces2,
+      RegisterTimeline timeline1, RegisterTimeline timeline2, Set<RISCVObservation> obs1, Set<RISCVObservation> obs2) {
+    TraceElement t1 = traces1.get(idx);
+    TraceElement t2 = traces2.get(idx);
     RISCVInstruction i1 = t1.instruction();
     RISCVInstruction i2 = t2.instruction();
 
@@ -277,10 +274,10 @@ public class RVFIOSExtractor implements Extractor {
 
     // 2. Compare branch outcome
     if (i1.hasRS1() && i2.hasRS1() && i1.hasRS2() && i2.hasRS2()) {
-      long t1_rs1 = this.timeline1.get(t1.time(), i1.rs1());
-      long t2_rs1 = this.timeline2.get(t2.time(), i2.rs1());
-      long t1_rs2 = this.timeline1.get(t1.time(), i1.rs2());
-      long t2_rs2 = this.timeline2.get(t2.time(), i2.rs2());
+      long t1_rs1 = timeline1.get(t1.time(), i1.rs1());
+      long t2_rs1 = timeline2.get(t2.time(), i2.rs1());
+      long t1_rs2 = timeline1.get(t1.time(), i1.rs2());
+      long t2_rs2 = timeline2.get(t2.time(), i2.rs2());
 
       boolean taken1 = isBranchTaken(i1.type(), t1_rs1, t1_rs2);
       boolean taken2 = isBranchTaken(i2.type(), t2_rs1, t2_rs2);
@@ -294,15 +291,16 @@ public class RVFIOSExtractor implements Extractor {
     // TODO: there's some logic for new_pc, or rather no logic. Check it out later.
   }
 
-  private void compareDependencies(int idx, int distance) {
+  private void compareDependencies(int idx, int distance, List<TraceElement> traces1, List<TraceElement> traces2,
+      Set<RISCVObservation> obs1, Set<RISCVObservation> obs2) {
     int prevIdx = idx - distance;
     if (prevIdx < 0)
       return;
 
-    TraceElement current1 = this.traces1.get(idx);
-    TraceElement current2 = this.traces2.get(idx);
-    TraceElement prev1 = this.traces1.get(prevIdx);
-    TraceElement prev2 = this.traces2.get(prevIdx);
+    TraceElement current1 = traces1.get(idx);
+    TraceElement current2 = traces2.get(idx);
+    TraceElement prev1 = traces1.get(prevIdx);
+    TraceElement prev2 = traces2.get(prevIdx);
 
     RISCVInstruction i1 = current1.instruction();
     RISCVInstruction i2 = current2.instruction();
@@ -407,11 +405,12 @@ public class RVFIOSExtractor implements Extractor {
    * instruction;
    * currently only for syscall observation types
    */
-  private void compareSections(int idx) {
+  private void compareSections(int idx, List<TraceElement> traces1, List<TraceElement> traces2,
+      Set<RISCVObservation> obs1, Set<RISCVObservation> obs2) {
     if (idx < 8)
       return;
-    TraceElement t1 = this.traces1.get(idx);
-    TraceElement t2 = this.traces2.get(idx);
+    TraceElement t1 = traces1.get(idx);
+    TraceElement t2 = traces2.get(idx);
 
     RISCVInstruction i1 = t1.instruction();
     RISCVInstruction i2 = t2.instruction();
@@ -428,8 +427,8 @@ public class RVFIOSExtractor implements Extractor {
     for (int i = 0; i < 6; i++) {
       // extract syscall arg i
       int instructionIdx = idx - 8 + i;
-      TraceElement argt1 = this.traces1.get(instructionIdx);
-      TraceElement argt2 = this.traces2.get(instructionIdx);
+      TraceElement argt1 = traces1.get(instructionIdx);
+      TraceElement argt2 = traces2.get(instructionIdx);
       RISCVInstruction argi1 = argt1.instruction();
       RISCVInstruction argi2 = argt2.instruction();
 
@@ -445,8 +444,8 @@ public class RVFIOSExtractor implements Extractor {
 
     // extract syscall type observation
     int syscallTypeIdx = idx - 1;
-    TraceElement typet1 = this.traces1.get(syscallTypeIdx);
-    TraceElement typet2 = this.traces2.get(syscallTypeIdx);
+    TraceElement typet1 = traces1.get(syscallTypeIdx);
+    TraceElement typet2 = traces2.get(syscallTypeIdx);
     RISCVInstruction typei1 = typet1.instruction();
     RISCVInstruction typei2 = typet2.instruction();
     if (typei1.imm() != typei2.imm()) {
